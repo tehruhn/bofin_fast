@@ -1,0 +1,44 @@
+TODO
+
+MAJOR : remove class structure [DONE]
+
+1.	heom_state_dic : [2]*kcut, with Ncut [DONE]
+	change how it's called basically
+
+2.	grad_n is the same [DONE]
+
+3. 	grad_next:
+	
+	a)	spre and spost of Q dagger [DONE]
+
+	b)	(-1.0)**(n_excite+1) as prefactor to spost Q dagger [DONE]
+
+    c) the extra signs [DONE]
+
+4.	grad_prev:
+
+	a)	ck dagger times spost [DONE]
+
+	b)	if (n % 2) == 0:
+            op = eta_list[n][k]*spreQ[n] - ((-1.0)**(n_excite-1)) * np.conj(eta_list[n+1][k])*spostQ[n]
+        else: 
+            op = eta_list[n][k]*spreQ[n] - ((-1.0)**(n_excite-1)) * np.conj(eta_list[n-1][k])*spostQ[n]
+        #commmenting this out for the moment, but i need to fix this if we switch to non-thoss decompositions
+        #if n==0: #this is not general, just a tempory fix for 1 bath
+        #    op = eta_list[n][k]*spreQ[n] - ((-1.0)**(n_excite-1)) * np.conj(eta_list[1][k])*spostQ[n]
+        #if n==1:
+        #    op = eta_list[n][k]*spreQ[n] - ((-1.0)**(n_excite-1)) * np.conj(eta_list[0][k])*spostQ[n]
+        #print("sign on neg comm is:")
+        #print((-1.0)**(n_excite-1))
+        
+        
+        if renorm:
+            op = -1j*norm_minus[n_k, k,n]*op
+        else:
+            #temp_exp = sum(he_state_neigh[0:k+n*N_m])+1
+            #see thoss phd equation 2.69.  to get this phase we have to move the system operator 
+            #to the left, so it passes through k+n*N_m - 1 operators:
+            temp_exp = sum(he_state_neigh[0:k+n*N_m])
+            #op = -1j * (-1.0)**(n_excite - (k+n*N_m))*op
+            #op = -1j * (-1.0)**(n_excite - (temp_exp))*op
+            op = -1j * (-1.0)**(temp_exp)*op
