@@ -12,4 +12,5 @@ Instructions
 ------------
 
 Build the C++ version with ``` python setup.py build_ext --inplace```
+
 Run example notebooks.
