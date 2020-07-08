@@ -176,16 +176,17 @@ class BosonicHEOMSolver(object):
             raise RuntimeError("Spectral density correlation coefficients not "+"specified correctly.")
 
         # Check that no two vk's should be same in same set
-
         for i in range(len(vkAR)):
             for j in range(i+1, len(vkAR)):
                 if(np.isclose(vkAR[i], vkAR[j], rtol=1e-5, atol=1e-7)):
-                    raise RuntimeError("Expected simplified input.")
+                    warnings.warn("Expected simplified input.")
 
         for i in range(len(vkAI)):
             for j in range(i+1, len(vkAI)):
                 if(np.isclose(vkAI[i], vkAI[j], rtol=1e-5, atol=1e-7)):
-                    raise RuntimeError("Expected simplified input.")
+                    warnings.warn("Expected simplified input.")
+                    
+        
         
         self.H_sys = H_sys
 
@@ -334,8 +335,8 @@ class BosonicHEOMSolver(object):
             
             # Store each time dependent component
             for idx in range(1, len(H)):
-                temp_mat = sp.kron(h_identity_mat, liouvillian(H[i][0]))
-                solver_params.append([temp_mat, H[i][1]])
+                temp_mat = sp.kron(h_identity_mat, liouvillian(H[idx][0]))
+                solver_params.append([temp_mat, H[idx][1]])
 
             solver = scipy.integrate.ode(_dsuper_list_td)
             solver.set_f_params(solver_params)
