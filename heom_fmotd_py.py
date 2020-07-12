@@ -111,9 +111,8 @@ def _heom_state_dictionaries(dims, excitations):
     for state in state_number_enumerate(dims, excitations):
         state2idx[state] = nstates
         idx2state[nstates] = state
-        # print(state)
         nstates += 1
-    # print("TEST " + str(nstates))
+
     return nstates, state2idx, idx2state
 
 
@@ -333,6 +332,7 @@ class BosonicHEOMSolver(object):
         kcut = self.kcut
         he2idx = self.he2idx
         idx2he = self.idx2he
+
         for heidx in heidx_list:
             for k in range(self.kcut):
                 he_current = idx2he[heidx]
@@ -341,22 +341,34 @@ class BosonicHEOMSolver(object):
                 if he_next and (he_next not in he2idx):
                     he2idx[he_next] = self.nhe
                     idx2he[self.nhe] = he_next
-                    # print(self.nhe)
                     self.nhe += 1
 
                 if he_prev and (he_prev not in he2idx):
                     he2idx[he_prev] = self.nhe
                     idx2he[self.nhe] = he_prev
-                    # print(self.nhe)
                     self.nhe += 1
 
     def boson_grad_n(self, he_n):
+        """
+        Get the gradient term for the hierarchy ADM at
+        level n
+        """
+
+        # skip variable adjusts for common gammas that
+        # are passed at the end by process_input
+        # by only processing alternate values              
         skip = 0
+
         gradient_sum = 0
         L = self.L.copy()
-        for i in range(len(self.vk)):
+
+        for i in range(len(self.vk)):    
+            # the initial values have different gammas
+            # so are processed normally
             if i < self.NR + self.NI :
                 gradient_sum += he_n[i]*self.vk[i]
+            
+            # the last few values are duplicate so only half need to be processed
             else:
                 if skip:
                     skip = 0
@@ -383,9 +395,15 @@ class BosonicHEOMSolver(object):
 
 
     def boson_grad_prev(self, he_n, k, prev_he):
+        """
+        Get the previous gradient
+        """
         nk = he_n[k]
         ck = self.ck
         
+        # processes according to whether index into gammas
+        # is in the part of the list with duplicate gammas
+        # as processed by process_input
         if k < self.NR:
             norm_prev = nk
             op1 = -1j*norm_prev*ck[k]*(self.spreQ[k] - self.spostQ[k])
@@ -415,6 +433,9 @@ class BosonicHEOMSolver(object):
 
 
     def boson_grad_next(self, he_n, k, next_he):
+        """
+        Get the next gradient
+        """
         norm_next = 1
         op2 = -1j*norm_next*(self.spreQ[k] - self.spostQ[k])
 
@@ -814,26 +835,25 @@ class FermionicHEOMSolver(object):
                 if he_next and (he_next not in he2idx):
                     he2idx[he_next] = self.nhe
                     idx2he[self.nhe] = he_next
-                    # print(self.nhe)
                     self.nhe += 1
 
                 if he_prev and (he_prev not in he2idx):
                     he2idx[he_prev] = self.nhe
                     idx2he[self.nhe] = he_prev
-                    # print(self.nhe)
                     self.nhe += 1
 
     def fermion_grad_n(self, he_n):
+        """
+        Get the gradient term for the hierarchy ADM at
+        level n
+        """
         gradient_sum = 0
         L = self.L.copy()
-        # print(len(self.flat_vk))
-        # print(len(he_n))
-        # print("-----------")
+
         for i in range(len(self.flat_vk)):
             gradient_sum += he_n[i]*self.flat_vk[i]
 
         gradient_sum = -1*gradient_sum
-        # print("grad_sum: ", gradient_sum)
         sum_op = gradient_sum*np.eye(self.L.shape[0])
         L += sum_op
 
@@ -841,24 +861,32 @@ class FermionicHEOMSolver(object):
         nidx = self.he2idx[he_n]
         block = self.N**2
         pos = int(nidx*block)
-        # print(L)
-        # print()
         self.L_helems[pos:pos+block, pos:pos+block] += L
 
 
     def fermion_grad_prev(self, he_n, k, prev_he, idx):
+        """
+        Get next gradient
+        """
         nk = he_n[k]
         ck = self.flat_ck
 
+        # sign1 is based on number of excitations
+        # the finicky notation is explicit and correct
+        # TODO put theory
         norm_prev = 1
         sign1 = 0
         n_excite = 2
         for i in range(len(he_n)):
             if he_n[i] == 1:
                 n_excite +=1
-
         sign1 = (-1) ** (n_excite-1)
         upto = self.offsets[k] + idx
+
+        # sign2 is another prefix which looks ugly
+        # but is written out explicitly to 
+        # ensure correctness
+        # TODO put theory
         sign2 = 1
         for i in range(upto):
             if prev_he[i]:
@@ -871,8 +899,6 @@ class FermionicHEOMSolver(object):
         else:
             op1 = pref*((ck[self.offsets[k]+idx]*self.spreQ[k]) - (sign1*np.conj(ck[self.offsets[k+1]+idx]*self.spostQ[k])))
         # Fill in larger L
-        # print(op1.todense())
-        # print()
         rowidx = self.he2idx[he_n]
         colidx = self.he2idx[prev_he]
         block = self.N**2
@@ -883,9 +909,15 @@ class FermionicHEOMSolver(object):
 
 
     def fermion_grad_next(self, he_n, k, next_he, idx):
+        """
+        Get next gradient
+        """
         # nk = he_n[k]
         ck = self.flat_ck
 
+        # sign1 is based on number of excitations
+        # the finicky notation is explicit and correct
+        # TODO put theory
         norm_next = 1
         sign1 = 0
         n_excite = 2
@@ -895,6 +927,11 @@ class FermionicHEOMSolver(object):
 
         sign1 = (-1) ** (n_excite-1)
         upto = self.offsets[k] + idx
+
+        # sign2 is another prefix which looks ugly
+        # but is written out explicitly to 
+        # ensure correctness
+        # TODO put theory
         sign2 = 1
         for i in range(upto):
             if next_he[i]:
@@ -902,76 +939,45 @@ class FermionicHEOMSolver(object):
         pref = sign2 * -1j * norm_next
 
         op2 = pref*((self.spreQdag[k]) + (sign1*self.spostQdag[k]))
-        # print("lol ", sign1)
-        # print(op2.todense())
-        # print()
-        # print(op2.shape[0], op2.shape[1])
-        # print(sign1)
-        # Fill in larger L
-        # print( self.he2idx[he_n])
-        # print(next_he)
-        # print(self.he2idx[next_he])
         rowidx = self.he2idx[he_n]
         colidx = self.he2idx[next_he]
         block = self.N**2
         rowpos = int(rowidx*block)
         colpos = int(colidx*block)
-        # print(op2.shape)
-        # print(block)
-        # print(self.L_helems.shape)
         self.L_helems[rowpos:rowpos+block, colpos:colpos+block] += op2
 
     def fermion_rhs(self):
         """
         Make the RHS for fermionic case
         """
-        print("total_nhe: ", self.total_nhe)
         while self.nhe < self.total_nhe:
             heidxlist = copy(list(self.idx2he.keys()))
             self.populate(heidxlist)
 
         for n in self.idx2he:
             he_n = self.idx2he[n]
-            # print(he_n)
             self.fermion_grad_n(he_n)
             for k in range(self.kcut):
                 start = self.offsets[k]
                 end = self.offsets[k+1]
-                # print("endval", end)
                 num_elems = end-start
-                # print("numelems: ", num_elems)
                 for m in range(num_elems):
                     next_he = nexthe(he_n, self.offsets[k]+m, self.N_cut)
                     prev_he = prevhe(he_n, self.offsets[k]+m, self.N_cut)
-                    # print(next_he)
-                    # print(prev_he)
                     if next_he and (next_he in self.he2idx):
-                        # print("gn: ", k, m)
                         self.fermion_grad_next(he_n, k, next_he, m)
                     if prev_he and (prev_he in self.he2idx):
-                        # print("gp: ", k, m)
                         self.fermion_grad_prev(he_n, k, prev_he, m)
 
     def _fermion_solver(self):
         """
         Utility function for fermionic solver.
         """
-
-        # Initialize liouvillians and others using inputs
-        #self.kcut = len(self.len_list)
-        #print("len list",self.kcut)
-        
-        #nhe, he2idx, idx2he =_heom_state_dictionaries(
-       #                       [self.N_cut+1]*self.kcut, self.N_cut)
         self.kcut = len(self.offsets) - 1
-        # print("kcut ",self.kcut)
-        print("cutoff: ", self.N_cut)
 
         nhe, he2idx, idx2he =_heom_state_dictionaries(
                               [2]*len(self.flat_ck), self.N_cut)
-        # print(nhe)
         self.nhe = nhe
-        # print(nhe)
         self.he2idx = he2idx
         self.idx2he = idx2he
         total_nhe = int(factorial(self.N_cut + self.kcut)
@@ -988,8 +994,6 @@ class FermionicHEOMSolver(object):
             self.N = int(np.sqrt(self.H_sys.shape[0]))
             self.L = self.H_sys.data
             self.grad_shape = (self.N, self.N)
-
-        print("N: ", self.N)
         self.L_helems = lil_matrix((self.nhe*self.N**2, 
                         self.nhe*self.N**2), dtype=np.complex)
         # Set coupling operators
@@ -1002,10 +1006,6 @@ class FermionicHEOMSolver(object):
             spostQ.append(spost(coupOp).data)
             spreQdag.append(spre(coupOp.dag()).data)
             spostQdag.append(spost(coupOp.dag()).data)
-
-        # for mat in spreQdag:
-        #     print(mat.todense())
-        #     print()
 
         self.spreQ = spreQ
         self.spostQ = spostQ
