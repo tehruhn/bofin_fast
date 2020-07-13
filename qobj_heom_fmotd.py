@@ -79,6 +79,12 @@ class BosonicHEOMSolver(object):
         Liouvillian
         Or 
         QobjEvo
+        Or 
+        list of Hamiltonians with time dependence
+        
+        Format for input (if list):
+        [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
+
 
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
@@ -470,6 +476,12 @@ class FermionicHEOMSolver(object):
         Liouvillian
         Or 
         QobjEvo
+        Or 
+        list of Hamiltonians with time dependence
+        
+        Format for input (if list):
+        [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
+
         
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
@@ -570,6 +582,7 @@ class FermionicHEOMSolver(object):
             self.H_sys = QobjEvo(H_sys) 
         else:
             self.H_sys = H_sys
+            
         self.coup_op = coup_op
         self.ck = ck
         self.vk = vk
