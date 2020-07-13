@@ -132,8 +132,21 @@ class BosonicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-           type(H_sys) != qutip.qutip.QobjEvo):
+            type(H_sys) != qutip.qutip.QobjEvo and
+            type(H_sys) != list):
             raise RuntimeError("Hamiltonian format is incorrect.")
+
+        if type(H_sys) == list:
+            size = len(H_sys)
+            for i in range(0, size):
+                if(i == 0):
+                    if type(H_sys[i]) != qutip.qutip.Qobj:
+                        raise RuntimeError("Hamiltonian format is incorrect.")
+                else:
+                    if (type(H_sys[i][0]) != qutip.qutip.Qobj and 
+                        type(H_sys[i][1])!= function):
+                        raise RuntimeError("Hamiltonian format is incorrect.")
+
 
         # Checks for coupling operator
 
@@ -173,8 +186,10 @@ class BosonicHEOMSolver(object):
                     warnings.warn("Expected simplified input.")
                     
         
-        
-        self.H_sys = H_sys
+        if type(H_sys) = list:
+            self.H_sys = QobjEvo(H_sys) 
+        else:
+            self.H_sys = H_sys
 
         nr = len(ckAR)
         ni = len(ckAI)
@@ -503,8 +518,20 @@ class FermionicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-           type(H_sys) != qutip.qutip.QobjEvo):
+            type(H_sys) != qutip.qutip.QobjEvo and
+            type(H_sys) != list):
             raise RuntimeError("Hamiltonian format is incorrect.")
+
+        if type(H_sys) == list:
+            size = len(H_sys)
+            for i in range(0, size):
+                if(i == 0):
+                    if type(H_sys[i]) != qutip.qutip.Qobj:
+                        raise RuntimeError("Hamiltonian format is incorrect.")
+                else:
+                    if (type(H_sys[i][0]) != qutip.qutip.Qobj and 
+                        type(H_sys[i][1])!= function):
+                        raise RuntimeError("Hamiltonian format is incorrect.")
 
         # Checks for cks and vks
 
@@ -539,7 +566,10 @@ class FermionicHEOMSolver(object):
         # TODO
         # more checks for coup ops and ck and vk
 
-        self.H_sys = H_sys
+        if type(H_sys) = list:
+            self.H_sys = QobjEvo(H_sys) 
+        else:
+            self.H_sys = H_sys
         self.coup_op = coup_op
         self.ck = ck
         self.vk = vk
@@ -605,6 +635,9 @@ class FermionicHEOMSolver(object):
         len_list = [len(elem) for elem in ck]
         flat_ck = [elem for row in ck for elem in row]
         flat_vk = [elem for row in vk for elem in row]
+
+        flat_ck = flat_ck.astype(complex)
+        flat_vk = flat_vk.astype(complex)
 
         # Passing data to C++ interfacer
 
