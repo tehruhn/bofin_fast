@@ -186,7 +186,7 @@ class BosonicHEOMSolver(object):
                     warnings.warn("Expected simplified input.")
                     
         
-        if type(H_sys) = list:
+        if type(H_sys) == list:
             self.H_sys = QobjEvo(H_sys) 
         else:
             self.H_sys = H_sys
@@ -566,7 +566,7 @@ class FermionicHEOMSolver(object):
         # TODO
         # more checks for coup ops and ck and vk
 
-        if type(H_sys) = list:
+        if type(H_sys) == list:
             self.H_sys = QobjEvo(H_sys) 
         else:
             self.H_sys = H_sys
