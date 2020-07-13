@@ -135,11 +135,8 @@ class BosonicHEOMSolver(object):
         System Hamiltonian
         Or 
         Liouvillian
-        Or 
-        list of Hamiltonians with time dependence
-        
-        Format for input (if list):
-        [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
+        Or
+        QobjEvo
 
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
@@ -195,19 +192,8 @@ class BosonicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-           type(H_sys) != list):
+           type(H_sys) != qutip.qutip.QobjEvo):
             raise RuntimeError("Hamiltonian format is incorrect.")
-
-        if type(H_sys) == list:
-            size = len(H_sys)
-            for i in range(0, size):
-                if(i == 0):
-                    if type(H_sys[i]) != qutip.qutip.Qobj:
-                        raise RuntimeError("Hamiltonian format is incorrect.")
-                else:
-                    if (type(H_sys[i][0]) != qutip.qutip.Qobj and 
-                        type(H_sys[i][1])!= function):
-                        raise RuntimeError("Hamiltonian format is incorrect.")
 
         # Checks for coupling operator
 
@@ -311,10 +297,15 @@ class BosonicHEOMSolver(object):
         self.vk = np.array(vkAR + vkAI + common_vk).astype(complex)
         self.NR = len(ckAR)
         self.NI = len(ckAI)
+
+        # Checks and flags for kind of Hamiltonian
+
         self.isHamiltonian = True 
-        self.isListInput = False
-        if type(self.H_sys) is list:
-            self.isListInput = True
+        self.isTimeDep = False
+
+        if type(self.H_sys) is qutip.qutip.QobjEvo:
+            self.H_sys = self.H_sys.to_list()
+            self.isTimeDep = True
 
         else:
             if self.H_sys.type == 'oper':
@@ -564,7 +555,7 @@ class BosonicHEOMSolver(object):
 
         solver = None
 
-        if self.isListInput:
+        if self.isTimeDep:
 
             solver_params = []
             constant_func = lambda x: 1.0

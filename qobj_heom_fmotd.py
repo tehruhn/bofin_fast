@@ -73,15 +73,12 @@ class BosonicHEOMSolver(object):
     then solved used the same ODE solvers as other qutip solvers (e.g. mesolve)
     Attributes
     ----------
-    H_sys : Qobj or list 
+    H_sys : Qobj or QobjEvo 
         System Hamiltonian
         Or 
         Liouvillian
         Or 
-        list of Hamiltonians with time dependence
-        
-        Format for input (if list):
-        [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
+        QobjEvo
 
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
@@ -135,19 +132,8 @@ class BosonicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-           type(H_sys) != list):
+           type(H_sys) != qutip.qutip.QobjEvo):
             raise RuntimeError("Hamiltonian format is incorrect.")
-
-        if type(H_sys) == list:
-            size = len(H_sys)
-            for i in range(0, size):
-                if(i == 0):
-                    if type(H_sys[i]) != qutip.qutip.Qobj:
-                        raise RuntimeError("Hamiltonian format is incorrect.")
-                else:
-                    if (type(H_sys[i][0]) != qutip.qutip.Qobj and 
-                        type(H_sys[i][1])!= function):
-                        raise RuntimeError("Hamiltonian format is incorrect.")
 
         # Checks for coupling operator
 
@@ -300,11 +286,11 @@ class BosonicHEOMSolver(object):
         # (also passed a flag which tells if Hamiltonian
         # is SuperOp or regular Qobj)
         isHamiltonian = True 
-        isListInput = False
+        isTimeDep = False
 
-        if type(H) is list:
-            Hsys = H[0].data.toarray()
-            isListInput = True
+        if type(H) is qutip.qutip.QobjEvo:
+            Hsys = H.to_list()[0].data.toarray()
+            isTimeDep = True
 
         else:
             Hsys = H.data.toarray()
@@ -326,17 +312,18 @@ class BosonicHEOMSolver(object):
 
         solver = None
 
-        if isListInput:
+        if isTimeDep:
 
             solver_params = []
             constant_func = lambda x: 1.0
             h_identity_mat = sp.identity(nstates, format='csr')
             solver_params.append([RHSmat, constant_func])
             
+            H_list = H.to_list()
             # Store each time dependent component
-            for idx in range(1, len(H)):
-                temp_mat = sp.kron(h_identity_mat, liouvillian(H[idx][0]))
-                solver_params.append([temp_mat, H[idx][1]])
+            for idx in range(1, len(H_list)):
+                temp_mat = sp.kron(h_identity_mat, liouvillian(H_list[idx][0]))
+                solver_params.append([temp_mat, H_list[idx][1]])
 
             solver = scipy.integrate.ode(_dsuper_list_td)
             solver.set_f_params(solver_params)
@@ -358,7 +345,7 @@ class BosonicHEOMSolver(object):
         self._ode = solver
         self.RHSmat = RHSmat
         self._configured = True
-        if isHamiltonian or isListInput:
+        if isHamiltonian or isTimeDep:
             self._sup_dim = Hsys.shape[0] * Hsys.shape[0]
         else:
             self._sup_dim = int(sqrt(Hsys.shape[0])) * int(sqrt(Hsys.shape[0]))
@@ -462,16 +449,13 @@ class FermionicHEOMSolver(object):
 
     Attributes
     ----------
-    H_sys : Qobj or list 
+    H_sys : Qobj or QobjEvo
         System Hamiltonian
         Or 
         Liouvillian
         Or 
-        list of Hamiltonians with time dependence
+        QobjEvo
         
-        Format for input (if list):
-        [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
-
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
         Could also be a list of operators, which needs to be the 
@@ -519,19 +503,8 @@ class FermionicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-           type(H_sys) != list):
+           type(H_sys) != qutip.qutip.QobjEvo):
             raise RuntimeError("Hamiltonian format is incorrect.")
-
-        if type(H_sys) == list:
-            size = len(H_sys)
-            for i in range(0, size):
-                if(i == 0):
-                    if type(H_sys[i]) != qutip.qutip.Qobj:
-                        raise RuntimeError("Hamiltonian format is incorrect.")
-                else:
-                    if (type(H_sys[i][0]) != qutip.qutip.Qobj and 
-                        type(H_sys[i][1])!= function):
-                        raise RuntimeError("Hamiltonian format is incorrect.")
 
         # Checks for cks and vks
 
@@ -612,11 +585,11 @@ class FermionicHEOMSolver(object):
         # (also passed a flag which tells if Hamiltonian
         # is SuperOp or regular Qobj)
         isHamiltonian = True 
-        isListInput = False
+        isTimeDep = False
 
-        if type(H) is list:
-            Hsys = H[0].data.toarray()
-            isListInput = True
+        if type(H) is qutip.qutip.QobjEvo:
+            Hsys = H.to_list()[0].data.toarray()
+            isTimeDep = True
 
         else:
             Hsys = H.data.toarray()
@@ -646,17 +619,17 @@ class FermionicHEOMSolver(object):
 
         solver = None
 
-        if isListInput:
+        if isTimeDep:
 
             solver_params = []
             constant_func = lambda x: 1.0
             h_identity_mat = sp.identity(nstates, format='csr')
             solver_params.append([RHSmat, constant_func])
-            
+            H_list = H.to_list()
             # Store each time dependent component
-            for idx in range(1, len(H)):
-                temp_mat = sp.kron(h_identity_mat, liouvillian(H[i][0]))
-                solver_params.append([temp_mat, H[i][1]])
+            for idx in range(1, len(H_list)):
+                temp_mat = sp.kron(h_identity_mat, liouvillian(H_list[i][0]))
+                solver_params.append([temp_mat, H_list[i][1]])
 
             solver = scipy.integrate.ode(_dsuper_list_td)
             solver.set_f_params(solver_params)
@@ -678,7 +651,7 @@ class FermionicHEOMSolver(object):
         self._ode = solver
         self.RHSmat = RHSmat
         self._configured = True
-        if isHamiltonian or isListInput:
+        if isHamiltonian or isTimeDep:
             self._sup_dim = Hsys.shape[0] * Hsys.shape[0]
         else:
             self._sup_dim = int(sqrt(Hsys.shape[0])) * int(sqrt(Hsys.shape[0]))
