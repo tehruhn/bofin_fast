@@ -56,7 +56,7 @@ from qutip.cy.spconvert import dense2D_to_fastcsr_fmode
 from qutip.superoperator import vec2mat  
 from scipy.sparse import lil_matrix
 from qutip.ui.progressbar import BaseProgressBar
-from copy import copy, deepcopy
+from copy import copy
 
 def add_at_idx(seq, k, val):
     """
@@ -135,14 +135,11 @@ class BosonicHEOMSolver(object):
         System Hamiltonian
         Or 
         Liouvillian
-        Or
-        QobjEvo
         Or 
         list of Hamiltonians with time dependence
         
         Format for input (if list):
         [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
-
 
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
@@ -198,8 +195,7 @@ class BosonicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-            type(H_sys) != qutip.qutip.QobjEvo and
-            type(H_sys) != list):
+           type(H_sys) != list):
             raise RuntimeError("Hamiltonian format is incorrect.")
 
         if type(H_sys) == list:
@@ -251,10 +247,7 @@ class BosonicHEOMSolver(object):
                 if(np.isclose(vkAI[i], vkAI[j], rtol=1e-5, atol=1e-7)):
                     warnings.warn("Expected simplified input.")
         
-        if type(H_sys) == list:
-            self.H_sys = QobjEvo(H_sys) 
-        else:
-            self.H_sys = H_sys
+        self.H_sys = H_sys
 
         nr = len(ckAR)
         ni = len(ckAI)
@@ -318,22 +311,16 @@ class BosonicHEOMSolver(object):
         self.vk = np.array(vkAR + vkAI + common_vk).astype(complex)
         self.NR = len(ckAR)
         self.NI = len(ckAI)
-
-        # Checks and sets flags for Hamiltonian type
-
         self.isHamiltonian = True 
-        self.isTimeDep = False
-
-        if type(self.H_sys) is qutip.qutip.QobjEvo:
-            self.H_sys_list = self.H_sys.to_list()
-            self.isTimeDep = True
+        self.isListInput = False
+        if type(self.H_sys) is list:
+            self.isListInput = True
 
         else:
             if self.H_sys.type == 'oper':
                 self.isHamiltonian = True
             else:
                 self.isHamiltonian = False
-
         if isinstance(options, Options): self.options = options
 
     def populate(self, heidx_list):
@@ -503,15 +490,9 @@ class BosonicHEOMSolver(object):
 
         # Separate cases for Hamiltonian and Liouvillian
         if self.isHamiltonian:
-
-            if self.isTimeDep:
-                self.N = self.H_sys_list[0].shape[0]
-                self.L = liouvillian(self.H_sys_list[0], []).data
-                self.grad_shape = (self.N**2, self.N**2)
-            else:
-                self.N = self.H_sys.shape[0]
-                self.L = liouvillian(self.H_sys, []).data
-                self.grad_shape = (self.N**2, self.N**2)
+            self.N = self.H_sys.shape[0]
+            self.L = liouvillian(self.H_sys, []).data
+            self.grad_shape = (self.N**2, self.N**2)
             
         else:
             self.N = int(np.sqrt(self.H_sys.shape[0]))
@@ -583,18 +564,17 @@ class BosonicHEOMSolver(object):
 
         solver = None
 
-        if self.isTimeDep:
+        if self.isListInput:
 
             solver_params = []
             constant_func = lambda x: 1.0
             h_identity_mat = sp.identity(nstates, format='csr')
             solver_params.append([RHSmat, constant_func])
-            H_list = self.H_sys_list
-
+            
             # Store each time dependent component
-            for idx in range(1, len(H_list)):
-                temp_mat = sp.kron(h_identity_mat, liouvillian(H_list[idx][0]))
-                solver_params.append([temp_mat, H_list[idx][1]])
+            for idx in range(1, len(H)):
+                temp_mat = sp.kron(h_identity_mat, liouvillian(H[idx][0]))
+                solver_params.append([temp_mat, H[idx][1]])
 
             solver = scipy.integrate.ode(_dsuper_list_td)
             solver.set_f_params(solver_params)
@@ -616,12 +596,8 @@ class BosonicHEOMSolver(object):
         self._ode = solver
         self.RHSmat = RHSmat 
         self._configured = True
-        if self.isHamiltonian:
-            if self.isTimeDep:
-                self._sup_dim = self.H_sys_list[0].shape[0] *\
-                                self.H_sys_list[0].shape[0]
-            else:
-                self._sup_dim = H.shape[0] * H.shape[0]
+        if self.isHamiltonian or self.isListInput:
+            self._sup_dim = H.shape[0] * H.shape[0]
         else:
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
         self._N_he = nstates
@@ -635,7 +611,7 @@ class BosonicHEOMSolver(object):
         sup_dim = self._sup_dim
         n = int(np.sqrt(sup_dim))
         unit_h_elems = sp.identity(nstates, format='csr')
-        L = deepcopy(self.RHSmat)# + sp.kron(unit_h_elems, 
+        L = self.RHSmat# + sp.kron(unit_h_elems, 
                         #liouvillian(H).data)
 
         b_mat = np.zeros(sup_dim*nstates, dtype=complex)
@@ -732,8 +708,6 @@ class FermionicHEOMSolver(object):
         System Hamiltonian
         Or 
         Liouvillian
-        Or
-        QobjEvo
         Or 
         list of Hamiltonians with time dependence
         
@@ -790,8 +764,7 @@ class FermionicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-            type(H_sys) != qutip.qutip.QobjEvo and
-            type(H_sys) != list):
+           type(H_sys) != list):
             raise RuntimeError("Hamiltonian format is incorrect.")
 
         if type(H_sys) == list:
@@ -838,31 +811,11 @@ class FermionicHEOMSolver(object):
         # TODO
         # more checks for coup ops and ck and vk
 
-        if type(H_sys) == list:
-            self.H_sys = QobjEvo(H_sys) 
-        else:
-            self.H_sys = H_sys
-
+        self.H_sys = H_sys
         self.coup_op = coup_op
         self.ck = ck
         self.vk = vk
         self.N_cut = int(N_cut)
-
-        # Checks and sets flags for Hamiltonian type
-
-        self.isHamiltonian = True 
-        self.isTimeDep = False
-
-        if type(self.H_sys) is qutip.qutip.QobjEvo:
-            self.H_sys_list = self.H_sys.to_list()
-            self.isTimeDep = True
-
-        else:
-            if self.H_sys.type == 'oper':
-                self.isHamiltonian = True
-            else:
-                self.isHamiltonian = False
-
         if isinstance(options, Options): self.options = options
 
     def populate(self, heidx_list):
@@ -998,7 +951,6 @@ class FermionicHEOMSolver(object):
         Make the RHS for fermionic case
         """
         while self.nhe < self.total_nhe:
-            
             heidxlist = copy(list(self.idx2he.keys()))
             self.populate(heidxlist)
 
@@ -1025,19 +977,13 @@ class FermionicHEOMSolver(object):
 
         nhe, he2idx, idx2he =_heom_state_dictionaries(
                               [2]*len(self.flat_ck), self.N_cut)
-        self.nhe = nhe 
+        self.nhe = nhe
         self.he2idx = he2idx
         self.idx2he = idx2he
-        # THIS IS NOT CORRECT IN FERMION CASE
-        #total_nhe = int(factorial(self.N_cut + self.kcut)
-        #           /(factorial(self.N_cut)*factorial(self.kcut)))
-        
-        #JUST USE THE COUNT from Dictionaries:
-        self.total_nhe = copy(nhe)
-        
-        
-        
-        
+        total_nhe = int(factorial(self.N_cut + self.kcut)
+                   /(factorial(self.N_cut)*factorial(self.kcut)))
+        self.total_nhe = total_nhe
+        # self.total_nhe = nhe
         # Separate cases for Hamiltonian and Liouvillian
         if self.isHamiltonian:
             self.N = self.H_sys.shape[0]
@@ -1110,6 +1056,22 @@ class FermionicHEOMSolver(object):
             curr_sum += self.len_list[i]
            
         # Passing Hamiltonian
+
+        # (also passed a flag which tells if Hamiltonian
+        # is SuperOp or regular Qobj)
+        self.isHamiltonian = True 
+        self.isListInput = False
+
+        if type(H) is list:
+            Hsys = H[0].data.toarray()
+            self.isListInput = True
+
+        else:
+            Hsys = H.data.toarray()
+            if H.type == 'oper':
+                self.isHamiltonian = True
+            else:
+                self.isHamiltonian = False
         # Passing data to fermionic solver
 
         RHSmat, nstates = self._fermion_solver()
@@ -1119,17 +1081,17 @@ class FermionicHEOMSolver(object):
 
         solver = None
 
-        if self.isTimeDep:
+        if self.isListInput:
 
             solver_params = []
             constant_func = lambda x: 1.0
             h_identity_mat = sp.identity(nstates, format='csr')
-            H_list = self.H_sys_list
-
+            solver_params.append([RHSmat, constant_func])
+            
             # Store each time dependent component
-            for idx in range(1, len(H_list)):
-                temp_mat = sp.kron(h_identity_mat, liouvillian(H_list[idx][0]))
-                solver_params.append([temp_mat, H_list[idx][1]])
+            for idx in range(1, len(H)):
+                temp_mat = sp.kron(h_identity_mat, liouvillian(H[i][0]))
+                solver_params.append([temp_mat, H[i][1]])
 
             solver = scipy.integrate.ode(_dsuper_list_td)
             solver.set_f_params(solver_params)
@@ -1151,31 +1113,27 @@ class FermionicHEOMSolver(object):
         self._ode = solver
         self.RHSmat = RHSmat 
         self._configured = True
-        if self.isHamiltonian:
-            if self.isTimeDep:
-                self._sup_dim = self.H_sys_list[0].shape[0] *\
-                                self.H_sys_list[0].shape[0]
-            else:
-                self._sup_dim = H.shape[0] * H.shape[0]
+        if self.isHamiltonian or self.isListInput:
+            self._sup_dim = H.shape[0] * H.shape[0]
         else:
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
-        
+        self._N_he = nstates
 
     def steady_state(self, H, rho0):
         """
         Computes steady state dynamics
         """
 
-        nstates =  self.total_nhe
+        nstates =  self._N_he
         sup_dim = self._sup_dim
         n = int(np.sqrt(sup_dim))
         unit_h_elems = sp.identity(nstates, format='csr')
-        L = deepcopy(self.RHSmat)# + sp.kron(unit_h_elems, 
+        L = self.RHSmat# + sp.kron(unit_h_elems, 
                         #liouvillian(H).data)
 
         b_mat = np.zeros(sup_dim*nstates, dtype=complex)
         b_mat[0] = 1.
-        
+
         L[0, 0 : n**2*nstates] = 0.
         L = L.tocsc() + \
             sp.csc_matrix((np.ones(n), (np.zeros(n), 
@@ -1227,7 +1185,7 @@ class FermionicHEOMSolver(object):
 
         output.states.append(Qobj(rho0))
         rho0_flat = rho0.full().ravel('F') 
-        rho0_he = np.zeros([sup_dim*self.total_nhe], dtype=complex)
+        rho0_he = np.zeros([sup_dim*self._N_he], dtype=complex)
         rho0_he[:sup_dim] = rho0_flat
         solver.set_initial_value(rho0_he, tlist[0])
 
