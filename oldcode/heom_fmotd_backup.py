@@ -39,7 +39,7 @@ hierarchy equations of motion (HEOM).
 # Authors: Neill Lambert, Tarun Raheja
 # Contact: nwlambert@gmail.com
 
-import timeit, warnings
+import timeit
 import numpy as np
 from math import sqrt, factorial
 import scipy.sparse as sp
@@ -50,70 +50,12 @@ from qutip.cy.spmatfuncs import cy_ode_rhs
 from qutip.solver import Options, Result
 from numpy import matrix, linalg
 from qutip.cy.spmatfuncs import cy_ode_rhs
+from cypadcsr import _pad_csr
+from interfacer import boson_interfacecpp, fermion_interfacecpp
 from scipy.sparse.linalg import (use_solver, splu, spilu, spsolve, eigs,
                          LinearOperator, gmres, lgmres, bicgstab)
 from qutip.cy.spconvert import dense2D_to_fastcsr_fmode
 from qutip.superoperator import vec2mat  
-from scipy.sparse import lil_matrix
-from qutip.ui.progressbar import BaseProgressBar
-from copy import copy
-
-def add_at_idx(seq, k, val):
-    """
-    Add (subtract) a value in the tuple at position k
-    """
-    list_seq = list(seq)
-    list_seq[k] += val
-    return tuple(list_seq)
-
-def prevhe(current_he, k, ncut):
-    """
-    Calculate the previous heirarchy index
-    for the current index `n`.
-    """
-    nprev = add_at_idx(current_he, k, -1)
-    if nprev[k] < 0:
-        return False
-    return nprev
-
-def nexthe(current_he, k, ncut):
-    """
-    Calculate the next heirarchy index
-    for the current index `n`.
-    """
-    nnext = add_at_idx(current_he, k, 1)
-    if sum(nnext) > ncut:
-        return False
-    return nnext
-
-def _heom_state_dictionaries(dims, excitations):
-    """
-    Return the number of states, and lookup-dictionaries for translating
-    a state tuple to a state index, and vice versa, for a system with a given
-    number of components and maximum number of excitations.
-    Parameters
-    ----------
-    dims: list
-        A list with the number of states in each sub-system.
-    excitations : integer
-        The maximum numbers of dimension
-    Returns
-    -------
-    nstates, state2idx, idx2state: integer, dict, dict
-        The number of states `nstates`, a dictionary for looking up state
-        indices from a state tuple, and a dictionary for looking up state
-        state tuples from state indices.
-    """
-    nstates = 0
-    state2idx = {}
-    idx2state = {}
-
-    for state in state_number_enumerate(dims, excitations):
-        state2idx[state] = nstates
-        idx2state[nstates] = state
-        nstates += 1
-
-    return nstates, state2idx, idx2state
 
 
 class BosonicHEOMSolver(object):
@@ -135,14 +77,11 @@ class BosonicHEOMSolver(object):
         System Hamiltonian
         Or 
         Liouvillian
-        Or
-        QobjEvo
         Or 
         list of Hamiltonians with time dependence
         
         Format for input (if list):
         [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
-
 
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
@@ -168,8 +107,6 @@ class BosonicHEOMSolver(object):
             self.options = Options()
         else:
             self.options = options
-
-        self.progress_bar = BaseProgressBar()
         # set other attributes
         self.configure(H_sys, coup_op, ckAR, ckAI, vkAR, vkAI, N_cut, options)
 
@@ -198,8 +135,7 @@ class BosonicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-            type(H_sys) != qutip.qutip.QobjEvo and
-            type(H_sys) != list):
+           type(H_sys) != list):
             raise RuntimeError("Hamiltonian format is incorrect.")
 
         if type(H_sys) == list:
@@ -240,7 +176,6 @@ class BosonicHEOMSolver(object):
             raise RuntimeError("Spectral density correlation coefficients not "+"specified correctly.")
 
         # Check that no two vk's should be same in same set
-
         for i in range(len(vkAR)):
             for j in range(i+1, len(vkAR)):
                 if(np.isclose(vkAR[i], vkAR[j], rtol=1e-5, atol=1e-7)):
@@ -250,11 +185,10 @@ class BosonicHEOMSolver(object):
             for j in range(i+1, len(vkAI)):
                 if(np.isclose(vkAI[i], vkAI[j], rtol=1e-5, atol=1e-7)):
                     warnings.warn("Expected simplified input.")
+                    
         
-        if type(H_sys) == list:
-            self.H_sys = QobjEvo(H_sys) 
-        else:
-            self.H_sys = H_sys
+        
+        self.H_sys = H_sys
 
         nr = len(ckAR)
         ni = len(ckAI)
@@ -314,227 +248,7 @@ class BosonicHEOMSolver(object):
         self.common_ck = common_ck
         self.common_vk = common_vk
         self.N_cut = int(N_cut)
-        self.ck = np.array(ckAR + ckAI + common_ck).astype(complex)
-        self.vk = np.array(vkAR + vkAI + common_vk).astype(complex)
-        self.NR = len(ckAR)
-        self.NI = len(ckAI)
-
-        # Checks and sets flags for Hamiltonian type
-
-        self.isHamiltonian = True 
-        self.isTimeDep = False
-
-        if type(self.H_sys) is qutip.qutip.QobjEvo:
-            self.H_sys_list = self.H_sys.to_list()
-            self.isTimeDep = True
-
-        else:
-            if self.H_sys.type == 'oper':
-                self.isHamiltonian = True
-            else:
-                self.isHamiltonian = False
-
         if isinstance(options, Options): self.options = options
-
-    def populate(self, heidx_list):
-        """
-        Given a Hierarchy index list, populate the graph of next and
-        previous elements
-        """
-        ncut = self.N_cut
-        kcut = self.kcut
-        he2idx = self.he2idx
-        idx2he = self.idx2he
-
-        for heidx in heidx_list:
-            for k in range(self.kcut):
-                he_current = idx2he[heidx]
-                he_next = nexthe(he_current, k, ncut)
-                he_prev = prevhe(he_current, k, ncut)
-                if he_next and (he_next not in he2idx):
-                    he2idx[he_next] = self.nhe
-                    idx2he[self.nhe] = he_next
-                    self.nhe += 1
-
-                if he_prev and (he_prev not in he2idx):
-                    he2idx[he_prev] = self.nhe
-                    idx2he[self.nhe] = he_prev
-                    self.nhe += 1
-
-    def boson_grad_n(self, he_n):
-        """
-        Get the gradient term for the hierarchy ADM at
-        level n
-        """
-
-        # skip variable adjusts for common gammas that
-        # are passed at the end by process_input
-        # by only processing alternate values              
-        skip = 0
-
-        gradient_sum = 0
-        L = self.L.copy()
-
-        for i in range(len(self.vk)):    
-            # the initial values have different gammas
-            # so are processed normally
-            if i < self.NR + self.NI :
-                gradient_sum += he_n[i]*self.vk[i]
-            
-            # the last few values are duplicate so only half need to be processed
-            else:
-                if skip:
-                    skip = 0
-                    continue
-                else:
-                    tot_fixed = self.NR + self.NI
-                    extra = (i+1-tot_fixed)
-                    idx = int(tot_fixed + (extra/2) + (extra%2)) -1
-                    gradient_sum += he_n[idx]*self.vk[i]
-                    skip = 1
-
-        gradient_sum = -1*gradient_sum
-        sum_op = gradient_sum*np.eye(self.L.shape[0])
-        L += sum_op
-
-        # Fill into larger L
-        nidx = self.he2idx[he_n]
-        block = self.N**2
-        pos = int(nidx*block)
-        #indlist = np.array(list(range(pos, pos+block)))
-        #self.L_helems[indlist[:, None], indlist] += L
-        pos = int(nidx*(block))
-        self.L_helems[pos:pos+block, pos:pos+block] += L
-
-
-    def boson_grad_prev(self, he_n, k, prev_he):
-        """
-        Get the previous gradient
-        """
-        nk = he_n[k]
-        ck = self.ck
-        
-        # processes according to whether index into gammas
-        # is in the part of the list with duplicate gammas
-        # as processed by process_input
-        if k < self.NR:
-            norm_prev = nk
-            op1 = -1j*norm_prev*ck[k]*(self.spreQ[k] - self.spostQ[k])
-        elif (k >= self.NR and k < self.NR + self.NI):
-            norm_prev = nk
-            op1 = -1j*norm_prev*1j*self.ck[k]*(self.spreQ[k]+self.spostQ[k])
-        else:
-            norm_prev = nk
-            k1 = self.NR + self.NI + 2*(k-self.NR-self.NI)
-            term1 = -1j*self.ck[k1]*(self.spreQ[k] - self.spostQ[k])
-            term2 = self.ck[k1+1]*(self.spreQ[k] + self.spostQ[k])
-            op1 = norm_prev*(term1 + term2)
-
-        # Fill in larger L
-        rowidx = self.he2idx[he_n]
-        colidx = self.he2idx[prev_he]
-        block = self.N**2
-        rowpos = int(rowidx*block)
-        colpos = int(colidx*block)
-        #rowindlist = np.array(list(range(rowidx, rowidx + block)))
-        #colindlist = np.array(list(range(colidx, colidx + block)))
-        #self.L_helems[rowindlist[:, None], colindlist] += op1
-        rowpos = int(rowidx*(block))
-        colpos = int(colidx*(block))
-        self.L_helems[rowpos:rowpos+block, colpos:colpos+block] += op1
-
-
-
-    def boson_grad_next(self, he_n, k, next_he):
-        """
-        Get the next gradient
-        """
-        norm_next = 1
-        op2 = -1j*norm_next*(self.spreQ[k] - self.spostQ[k])
-
-        # Fill in larger L
-        rowidx = self.he2idx[he_n]
-        colidx = self.he2idx[next_he]
-        block = self.N**2
-        rowpos = int(rowidx*(block))
-        colpos = int(colidx*(block))
-        #rowindlist = np.array(list(range(rowidx, rowidx + block)))
-        #colindlist = np.array(list(range(colidx, colidx + block)))
-        #self.L_helems[rowindlist[:, None], colindlist] += op2
-        rowpos = int(rowidx*(block))
-        colpos = int(colidx*(block))
-        self.L_helems[rowpos:rowpos+block, colpos:colpos+block] += op2
-
-    def boson_rhs(self):
-        """
-        Make the RHS for bosonic case
-        """
-        while self.nhe < self.total_nhe:
-            heidxlist = copy(list(self.idx2he.keys()))
-            self.populate(heidxlist)
-
-        for n in self.idx2he:
-            he_n = self.idx2he[n]
-            self.boson_grad_n(he_n)
-            for k in range(self.kcut):
-                next_he = nexthe(he_n, k, self.N_cut)
-                prev_he = prevhe(he_n, k, self.N_cut)
-                if next_he and (next_he in self.he2idx):
-                    self.boson_grad_next(he_n, k, next_he)
-                if prev_he and (prev_he in self.he2idx):
-                    self.boson_grad_prev(he_n, k, prev_he)
-
-    def _boson_solver(self):
-        """
-        Utility function for bosonic solver.
-        """
-
-        # Initialize liouvillians and others using inputs
-        self.kcut = int(self.NR + self.NI + \
-            (len(self.ck) - self.NR - self.NI)/2)
-        nhe, he2idx, idx2he =_heom_state_dictionaries(
-                              [self.N_cut+1]*self.kcut, self.N_cut)
-        self.nhe = nhe
-        self.he2idx = he2idx
-        self.idx2he = idx2he
-        total_nhe = int(factorial(self.N_cut + self.kcut)
-                    /(factorial(self.N_cut)*factorial(self.kcut)))
-        self.total_nhe = total_nhe
-
-        # Separate cases for Hamiltonian and Liouvillian
-        if self.isHamiltonian:
-
-            if self.isTimeDep:
-                self.N = self.H_sys_list[0].shape[0]
-                self.L = liouvillian(self.H_sys_list[0], []).data
-                self.grad_shape = (self.N**2, self.N**2)
-            else:
-                self.N = self.H_sys.shape[0]
-                self.L = liouvillian(self.H_sys, []).data
-                self.grad_shape = (self.N**2, self.N**2)
-            
-        else:
-            self.N = int(np.sqrt(self.H_sys.shape[0]))
-            self.L = self.H_sys.data
-            self.grad_shape = (self.N, self.N)
-
-        self.L_helems = lil_matrix((self.total_nhe*self.N**2, 
-                        self.total_nhe*self.N**2), dtype=np.complex)
-
-        # Set coupling operators
-        spreQ = []
-        spostQ = []
-        for coupOp in self.coup_op:
-            spreQ.append(spre(coupOp).data)
-            spostQ.append(spost(coupOp).data)
-        self.spreQ = spreQ
-        self.spostQ = spostQ
-
-        # make right hand side
-        self.boson_rhs()
-
-        # return output
-        return self.L_helems, self.nhe
 
 
     def configure(self, H_sys, coup_op, ckAR, ckAI, vkAR, vkAI, N_cut,
@@ -569,32 +283,60 @@ class BosonicHEOMSolver(object):
         vkAI = self.vkAI
         common_ck = self.common_ck
         common_vk = self.common_vk
-        NR = self.NR
-        NI = self.NI
-        ck = self.ck
-        vk = self.vk
+        NR = len(ckAR)
+        NI = len(ckAI)
 
-        # Passing data to bosonic solver
+        # Input reconfig for passing to C++
 
-        RHSmat, nstates = self._boson_solver()
-        RHSmat = RHSmat.tocsr()
+        # Passing stacked coupling operators
+        Q = np.vstack([coupl_op.data.toarray() for coupl_op in Q])
+
+        # Passing exponents 
+        ck = np.array(ckAR + ckAI + common_ck).astype(complex)
+        vk = np.array(vkAR + vkAI + common_vk).astype(complex)
+
+        # Passing Hamiltonian
+
+        # (also passed a flag which tells if Hamiltonian
+        # is SuperOp or regular Qobj)
+        isHamiltonian = True 
+        isListInput = False
+
+        if type(H) is list:
+            Hsys = H[0].data.toarray()
+            isListInput = True
+
+        else:
+            Hsys = H.data.toarray()
+            if H.type == 'oper':
+                isHamiltonian = True
+            else:
+                isHamiltonian = False
+
+        # Flag for C++ indicating input is Hamiltonian
+        isHam = 1 if isHamiltonian else 2
+
+        # Passing data to C++ interfacer
+
+        RHSmat, nstates = boson_interfacecpp(Hsys.flatten(),Hsys.shape[0], 
+                          Q.flatten(), Q.shape[0], Q.shape[1], 
+                          ck, ck.shape[0], vk, vk.shape[0], Nc, NR, NI, isHam)
 
         # Setting up solver
 
         solver = None
 
-        if self.isTimeDep:
+        if isListInput:
 
             solver_params = []
             constant_func = lambda x: 1.0
             h_identity_mat = sp.identity(nstates, format='csr')
             solver_params.append([RHSmat, constant_func])
-            H_list = self.H_sys_list
-
+            
             # Store each time dependent component
-            for idx in range(1, len(H_list)):
-                temp_mat = sp.kron(h_identity_mat, liouvillian(H_list[idx][0]))
-                solver_params.append([temp_mat, H_list[idx][1]])
+            for idx in range(1, len(H)):
+                temp_mat = sp.kron(h_identity_mat, liouvillian(H[idx][0]))
+                solver_params.append([temp_mat, H[idx][1]])
 
             solver = scipy.integrate.ode(_dsuper_list_td)
             solver.set_f_params(solver_params)
@@ -614,16 +356,12 @@ class BosonicHEOMSolver(object):
         # Sets attributes related to solver
 
         self._ode = solver
-        self.RHSmat = RHSmat 
+        self.RHSmat = RHSmat
         self._configured = True
-        if self.isHamiltonian:
-            if self.isTimeDep:
-                self._sup_dim = self.H_sys_list[0].shape[0] *\
-                                self.H_sys_list[0].shape[0]
-            else:
-                self._sup_dim = H.shape[0] * H.shape[0]
+        if isHamiltonian or isListInput:
+            self._sup_dim = Hsys.shape[0] * Hsys.shape[0]
         else:
-            self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
+            self._sup_dim = int(sqrt(Hsys.shape[0])) * int(sqrt(Hsys.shape[0]))
         self._N_he = nstates
 
     def steady_state(self, H, rho0):
@@ -698,16 +436,12 @@ class BosonicHEOMSolver(object):
 
         dt = np.diff(tlist)
         n_tsteps = len(tlist)
-
-        self.progress_bar.start(n_tsteps)
         for t_idx, t in enumerate(tlist):
-            self.progress_bar.update(t_idx)
             if t_idx < n_tsteps - 1:
                 solver.integrate(solver.t + dt[t_idx])
-                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape, order='F'), dims=rho0.dims)
+                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape), dims=rho0.dims)
                 output.states.append(rho)
 
-        self.progress_bar.finished()
         return output
         
 def _dsuper_list_td(t, y, L_list):
@@ -732,8 +466,6 @@ class FermionicHEOMSolver(object):
         System Hamiltonian
         Or 
         Liouvillian
-        Or
-        QobjEvo
         Or 
         list of Hamiltonians with time dependence
         
@@ -756,17 +488,14 @@ class FermionicHEOMSolver(object):
         If set to None the default options will be used
     """
 
-    def __init__(self, H_sys, coup_op, ck, vk, N_cut,
-                  options=None):
+    def __init__(self, H_sys, coup_op, ck, vk, N_cut, options=None):
 
         self.reset()
         if options is None:
             self.options = Options()
         else:
             self.options = options
-        # set other attributes
         self.configure(H_sys, coup_op, ck, vk, N_cut, options)
-        self.progress_bar = BaseProgressBar()
 
     def reset(self):
         """
@@ -790,8 +519,7 @@ class FermionicHEOMSolver(object):
         # Checks for Hamiltonian
 
         if (type(H_sys) != qutip.qutip.Qobj and 
-            type(H_sys) != qutip.qutip.QobjEvo and
-            type(H_sys) != list):
+           type(H_sys) != list):
             raise RuntimeError("Hamiltonian format is incorrect.")
 
         if type(H_sys) == list:
@@ -838,236 +566,16 @@ class FermionicHEOMSolver(object):
         # TODO
         # more checks for coup ops and ck and vk
 
-        if type(H_sys) == list:
-            self.H_sys = QobjEvo(H_sys) 
-        else:
-            self.H_sys = H_sys
-
+        self.H_sys = H_sys
         self.coup_op = coup_op
         self.ck = ck
         self.vk = vk
         self.N_cut = int(N_cut)
-
-        # Checks and sets flags for Hamiltonian type
-
-        self.isHamiltonian = True 
-        self.isTimeDep = False
-
-        if type(self.H_sys) is qutip.qutip.QobjEvo:
-            self.H_sys_list = self.H_sys.to_list()
-            self.isTimeDep = True
-
-        else:
-            if self.H_sys.type == 'oper':
-                self.isHamiltonian = True
-            else:
-                self.isHamiltonian = False
-
         if isinstance(options, Options): self.options = options
 
-    def populate(self, heidx_list):
-        """
-        Given a Hierarchy index list, populate the graph of next and
-        previous elements
-        """
-        ncut = self.N_cut
-        kcut = self.kcut
-        he2idx = self.he2idx
-        idx2he = self.idx2he
-        for heidx in heidx_list:
-            for k in range(self.kcut):
-                he_current = idx2he[heidx]
-                he_next = nexthe(he_current, k, ncut)
-                he_prev = prevhe(he_current, k, ncut)
-                if he_next and (he_next not in he2idx):
-                    he2idx[he_next] = self.nhe
-                    idx2he[self.nhe] = he_next
-                    self.nhe += 1
-
-                if he_prev and (he_prev not in he2idx):
-                    he2idx[he_prev] = self.nhe
-                    idx2he[self.nhe] = he_prev
-                    self.nhe += 1
-
-    def fermion_grad_n(self, he_n):
-        """
-        Get the gradient term for the hierarchy ADM at
-        level n
-        """
-        gradient_sum = 0
-        L = self.L.copy()
-
-        for i in range(len(self.flat_vk)):
-            gradient_sum += he_n[i]*self.flat_vk[i]
-
-        gradient_sum = -1*gradient_sum
-        sum_op = gradient_sum*np.eye(self.L.shape[0])
-        L += sum_op
-
-        # Fill into larger L
-        nidx = self.he2idx[he_n]
-        block = self.N**2
-        pos = int(nidx*block)
-        self.L_helems[pos:pos+block, pos:pos+block] += L
 
 
-    def fermion_grad_prev(self, he_n, k, prev_he, idx):
-        """
-        Get next gradient
-        """
-        nk = he_n[k]
-        ck = self.flat_ck
-
-        # sign1 is based on number of excitations
-        # the finicky notation is explicit and correct
-        # TODO put theory
-        norm_prev = 1
-        sign1 = 0
-        n_excite = 2
-        for i in range(len(he_n)):
-            if he_n[i] == 1:
-                n_excite +=1
-        sign1 = (-1) ** (n_excite-1)
-        upto = self.offsets[k] + idx
-
-        # sign2 is another prefix which looks ugly
-        # but is written out explicitly to 
-        # ensure correctness
-        # TODO put theory
-        sign2 = 1
-        for i in range(upto):
-            if prev_he[i]:
-                sign2 *= -1
-        pref = sign2 * -1j * norm_prev
-
-        op1 = 0
-        if k%2 == 1:
-            op1 = pref*((ck[self.offsets[k]+idx]*self.spreQ[k]) - (sign1*np.conj(ck[self.offsets[k-1]+idx]*self.spostQ[k])))
-        else:
-            op1 = pref*((ck[self.offsets[k]+idx]*self.spreQ[k]) - (sign1*np.conj(ck[self.offsets[k+1]+idx]*self.spostQ[k])))
-        # Fill in larger L
-        rowidx = self.he2idx[he_n]
-        colidx = self.he2idx[prev_he]
-        block = self.N**2
-        rowpos = int(rowidx*block)
-        colpos = int(colidx*block)
-        self.L_helems[rowpos:rowpos+block, colpos:colpos+block] += op1
-
-
-
-    def fermion_grad_next(self, he_n, k, next_he, idx):
-        """
-        Get next gradient
-        """
-        # nk = he_n[k]
-        ck = self.flat_ck
-
-        # sign1 is based on number of excitations
-        # the finicky notation is explicit and correct
-        # TODO put theory
-        norm_next = 1
-        sign1 = 0
-        n_excite = 2
-        for i in range(len(he_n)):
-            if he_n[i] == 1:
-                n_excite +=1
-
-        sign1 = (-1) ** (n_excite-1)
-        upto = self.offsets[k] + idx
-
-        # sign2 is another prefix which looks ugly
-        # but is written out explicitly to 
-        # ensure correctness
-        # TODO put theory
-        sign2 = 1
-        for i in range(upto):
-            if next_he[i]:
-                sign2 *= -1
-        pref = sign2 * -1j * norm_next
-
-        op2 = pref*((self.spreQdag[k]) + (sign1*self.spostQdag[k]))
-        rowidx = self.he2idx[he_n]
-        colidx = self.he2idx[next_he]
-        block = self.N**2
-        rowpos = int(rowidx*block)
-        colpos = int(colidx*block)
-        self.L_helems[rowpos:rowpos+block, colpos:colpos+block] += op2
-
-    def fermion_rhs(self):
-        """
-        Make the RHS for fermionic case
-        """
-        while self.nhe < self.total_nhe:
-            heidxlist = copy(list(self.idx2he.keys()))
-            self.populate(heidxlist)
-
-        for n in self.idx2he:
-            he_n = self.idx2he[n]
-            self.fermion_grad_n(he_n)
-            for k in range(self.kcut):
-                start = self.offsets[k]
-                end = self.offsets[k+1]
-                num_elems = end-start
-                for m in range(num_elems):
-                    next_he = nexthe(he_n, self.offsets[k]+m, self.N_cut)
-                    prev_he = prevhe(he_n, self.offsets[k]+m, self.N_cut)
-                    if next_he and (next_he in self.he2idx):
-                        self.fermion_grad_next(he_n, k, next_he, m)
-                    if prev_he and (prev_he in self.he2idx):
-                        self.fermion_grad_prev(he_n, k, prev_he, m)
-
-    def _fermion_solver(self):
-        """
-        Utility function for fermionic solver.
-        """
-        self.kcut = len(self.offsets) - 1
-
-        nhe, he2idx, idx2he =_heom_state_dictionaries(
-                              [2]*len(self.flat_ck), self.N_cut)
-        self.nhe = nhe
-        self.he2idx = he2idx
-        self.idx2he = idx2he
-        total_nhe = int(factorial(self.N_cut + self.kcut)
-                   /(factorial(self.N_cut)*factorial(self.kcut)))
-        self.total_nhe = total_nhe
-        # self.total_nhe = nhe
-        
-        # Separate cases for Hamiltonian and Liouvillian
-        if self.isHamiltonian:
-            self.N = self.H_sys.shape[0]
-            self.L = liouvillian(self.H_sys, []).data
-            self.grad_shape = (self.N**2, self.N**2)
-            
-        else:
-            self.N = int(np.sqrt(self.H_sys.shape[0]))
-            self.L = self.H_sys.data
-            self.grad_shape = (self.N, self.N)
-        self.L_helems = lil_matrix((self.nhe*self.N**2, 
-                        self.nhe*self.N**2), dtype=np.complex)
-        # Set coupling operators
-        spreQ = []
-        spostQ = []
-        spreQdag = []
-        spostQdag = []
-        for coupOp in self.coup_op:
-            spreQ.append(spre(coupOp).data)
-            spostQ.append(spost(coupOp).data)
-            spreQdag.append(spre(coupOp.dag()).data)
-            spostQdag.append(spost(coupOp.dag()).data)
-
-        self.spreQ = spreQ
-        self.spostQ = spostQ
-        self.spreQdag = spreQdag
-        self.spostQdag = spostQdag
-        # make right hand side
-        self.fermion_rhs()
-
-        # return output
-        return self.L_helems, self.nhe
-
-
-    def configure(self, H_sys, coup_op, ck, vk, N_cut,
-                  options=None):
+    def configure(self, H_sys, coup_op, ck, vk, N_cut, options=None):
     
         """
         Configure the solver using the passed parameters
@@ -1094,36 +602,61 @@ class FermionicHEOMSolver(object):
         vk = self.vk
         Nc = self. N_cut
 
-        self.len_list = [len(elem) for elem in ck]
-        self.flat_ck = [elem for row in self.ck for elem in row]
-        self.flat_vk = [elem for row in self.vk for elem in row]
-        self.offsets = [0]
-        curr_sum = 0
-        for i in range(len(self.len_list)):
-            self.offsets.append(curr_sum+self.len_list[i])
-            curr_sum += self.len_list[i]
-           
+        # Input reconfig for passing to C++
+
+        # Passing stacked coupling operators
+        Q = np.vstack([coupl_op.data.toarray() for coupl_op in Q])
+
         # Passing Hamiltonian
-        # Passing data to fermionic solver
 
-        RHSmat, nstates = self._fermion_solver()
-        RHSmat = RHSmat.tocsr()
+        # (also passed a flag which tells if Hamiltonian
+        # is SuperOp or regular Qobj)
+        isHamiltonian = True 
+        isListInput = False
 
+        if type(H) is list:
+            Hsys = H[0].data.toarray()
+            isListInput = True
+
+        else:
+            Hsys = H.data.toarray()
+            if H.type == 'oper':
+                isHamiltonian = True
+            else:
+                isHamiltonian = False
+
+        # Flag for C++ indicating input is Hamiltonian
+        isHam = 1 if isHamiltonian else 2
+
+        # Passing exponents
+        len_list = [len(elem) for elem in ck]
+        flat_ck = [elem for row in ck for elem in row]
+        flat_vk = [elem for row in vk for elem in row]
+
+        # Passing data to C++ interfacer
+
+        RHSmat, nstates = fermion_interfacecpp(Hsys.flatten(),Hsys.shape[0], 
+                                    Q.flatten(), Q.shape[0], Q.shape[1], 
+                                    np.array(flat_ck), len(flat_ck), 
+                                    np.array(flat_vk), 
+                                    len(flat_vk), np.array(len_list,
+                                     dtype=np.int32), len(len_list),
+                                    Nc, isHam)
         # Setting up solver
 
         solver = None
 
-        if self.isTimeDep:
+        if isListInput:
 
             solver_params = []
             constant_func = lambda x: 1.0
             h_identity_mat = sp.identity(nstates, format='csr')
-            H_list = self.H_sys_list
-
+            solver_params.append([RHSmat, constant_func])
+            
             # Store each time dependent component
-            for idx in range(1, len(H_list)):
-                temp_mat = sp.kron(h_identity_mat, liouvillian(H_list[idx][0]))
-                solver_params.append([temp_mat, H_list[idx][1]])
+            for idx in range(1, len(H)):
+                temp_mat = sp.kron(h_identity_mat, liouvillian(H[i][0]))
+                solver_params.append([temp_mat, H[i][1]])
 
             solver = scipy.integrate.ode(_dsuper_list_td)
             solver.set_f_params(solver_params)
@@ -1143,18 +676,14 @@ class FermionicHEOMSolver(object):
         # Sets attributes related to solver
 
         self._ode = solver
-        self.RHSmat = RHSmat 
+        self.RHSmat = RHSmat
         self._configured = True
-        if self.isHamiltonian:
-            if self.isTimeDep:
-                self._sup_dim = self.H_sys_list[0].shape[0] *\
-                                self.H_sys_list[0].shape[0]
-            else:
-                self._sup_dim = H.shape[0] * H.shape[0]
+        if isHamiltonian or isListInput:
+            self._sup_dim = Hsys.shape[0] * Hsys.shape[0]
         else:
-            self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
+            self._sup_dim = int(sqrt(Hsys.shape[0])) * int(sqrt(Hsys.shape[0]))
         self._N_he = nstates
-
+    
     def steady_state(self, H, rho0):
         """
         Computes steady state dynamics
@@ -1187,7 +716,7 @@ class FermionicHEOMSolver(object):
         solution = solution.reshape((nstates, H.shape[0]**2))
 
         return Qobj(data, dims=rho0.dims), solution
-    
+
     def run(self, rho0, tlist):
         """
         Function to solve for an open quantum system using the
@@ -1227,23 +756,11 @@ class FermionicHEOMSolver(object):
 
         dt = np.diff(tlist)
         n_tsteps = len(tlist)
-        self.progress_bar.start(n_tsteps)
         for t_idx, t in enumerate(tlist):
-            self.progress_bar.update(t_idx)
             if t_idx < n_tsteps - 1:
                 solver.integrate(solver.t + dt[t_idx])
-                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape, order='F'), dims=rho0.dims)
+                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape), dims=rho0.dims)
                 output.states.append(rho)
 
-        self.progress_bar.finished()
         return output
         
-def _dsuper_list_td(t, y, L_list):
-    """
-    Auxiliary function for the integration.
-    Is called at every time step.
-    """
-    L = L_list[0][0] 
-    for n in range(1, len(L_list)):
-        L = L + L_list[n][0] * L_list[n][1](t)
-    return (L*y)
