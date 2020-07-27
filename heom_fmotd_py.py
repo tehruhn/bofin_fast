@@ -626,12 +626,21 @@ class BosonicHEOMSolver(object):
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
         self._N_he = nstates
 
-    def steady_state(self, H, rho0):
+    def steady_state(self, max_iter_refine = 100, use_mkl = True, weighted_matching = False):
         """
         Computes steady state dynamics
+        
+        max_iter_refine : Int
+            Parameter for the mkl LU solver. If pardiso errors are returned this should be increased.
+        use_mkl : Boolean
+            Optional override default use of mkl if mkl is installed.
+        weighted_matching : Boolean
+            Setting this true may increase run time, but reduce stability (pardisio may not converge).
         """
-
-        nstates =  self._N_he
+        
+        
+        
+        nstates =  self.nhe
         sup_dim = self._sup_dim
         n = int(np.sqrt(sup_dim))
         unit_h_elems = sp.identity(nstates, format='csr')
@@ -642,22 +651,46 @@ class BosonicHEOMSolver(object):
         b_mat[0] = 1.
 
         L[0, 0 : n**2*nstates] = 0.
-        L = L.tocsc() + \
-            sp.csc_matrix((np.ones(n), (np.zeros(n), 
+          
+        if settings.has_mkl & use_mkl == True:
+            print("Using Intel mkl solver")
+            from qutip._mkl.spsolve import (mkl_splu, mkl_spsolve)
+                  
+
+            L = L.tocsr() + \
+            sp.csr_matrix((np.ones(n), (np.zeros(n), 
                           [num*(n+1)for num in range(n)])),
                           shape=(n**2*nstates, n**2*nstates))
 
-        # Use superLU solver
+            L.sort_indices()
+        
 
-        LU = splu(L)
-        solution = LU.solve(b_mat)
+            
+            solution = mkl_spsolve(L, b_mat, perm = None, verbose = True, \
+                            max_iter_refine = max_iter_refine, \
+                            scaling_vectors = True, \
+                            weighted_matching = weighted_matching) 
 
+        else:    
+
+            L = L.tocsc() + \
+                sp.csc_matrix((np.ones(n), (np.zeros(n), 
+                              [num*(n+1)for num in range(n)])),
+                              shape=(n**2*nstates, n**2*nstates))
+
+            # Use superLU solver
+
+            LU = splu(L)
+            solution = LU.solve(b_mat)
+
+          
+        dims = self.H_sys.dims
         data = dense2D_to_fastcsr_fmode(vec2mat(solution[:sup_dim]), n, n)
         data = 0.5*(data + data.H)
 
-        solution = solution.reshape((nstates, H.shape[0]**2))
+        solution = solution.reshape((nstates, self.H_sys.shape[0]**2))
 
-        return Qobj(data, dims=rho0.dims), solution
+        return Qobj(data, dims=dims), solution
     
     def run(self, rho0, tlist):
         """
@@ -1160,13 +1193,21 @@ class FermionicHEOMSolver(object):
         else:
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
         
-
-    def steady_state(self, H, rho0):
+    def steady_state(self, max_iter_refine = 100, use_mkl = True, weighted_matching = False):
         """
         Computes steady state dynamics
+        
+        max_iter_refine : Int
+            Parameter for the mkl LU solver. If pardiso errors are returned this should be increased.
+        use_mkl : Boolean
+            Optional override default use of mkl if mkl is installed.
+        weighted_matching : Boolean
+            Setting this true may increase run time, but reduce stability (pardisio may not converge).
         """
-
-        nstates =  self.total_nhe
+        
+        
+        
+        nstates =  self.nhe 
         sup_dim = self._sup_dim
         n = int(np.sqrt(sup_dim))
         unit_h_elems = sp.identity(nstates, format='csr')
@@ -1175,24 +1216,50 @@ class FermionicHEOMSolver(object):
 
         b_mat = np.zeros(sup_dim*nstates, dtype=complex)
         b_mat[0] = 1.
-        
+
         L[0, 0 : n**2*nstates] = 0.
-        L = L.tocsc() + \
-            sp.csc_matrix((np.ones(n), (np.zeros(n), 
+          
+        if settings.has_mkl & use_mkl == True:
+            print("Using Intel mkl solver")
+            from qutip._mkl.spsolve import (mkl_splu, mkl_spsolve)
+                  
+
+            L = L.tocsr() + \
+            sp.csr_matrix((np.ones(n), (np.zeros(n), 
                           [num*(n+1)for num in range(n)])),
                           shape=(n**2*nstates, n**2*nstates))
 
-        # Use superLU solver
+            L.sort_indices()
+        
 
-        LU = splu(L)
-        solution = LU.solve(b_mat)
+            
+            solution = mkl_spsolve(L, b_mat, perm = None, verbose = True, \
+                            max_iter_refine = max_iter_refine, \
+                            scaling_vectors = True, \
+                            weighted_matching = weighted_matching) 
 
+        else:    
+
+            L = L.tocsc() + \
+                sp.csc_matrix((np.ones(n), (np.zeros(n), 
+                              [num*(n+1)for num in range(n)])),
+                              shape=(n**2*nstates, n**2*nstates))
+
+            # Use superLU solver
+
+            LU = splu(L)
+            solution = LU.solve(b_mat)
+
+          
+        dims = self.H_sys.dims
         data = dense2D_to_fastcsr_fmode(vec2mat(solution[:sup_dim]), n, n)
         data = 0.5*(data + data.H)
 
-        solution = solution.reshape((nstates, H.shape[0]**2))
+        solution = solution.reshape((nstates, self.H_sys.shape[0]**2))
 
-        return Qobj(data, dims=rho0.dims), solution
+        return Qobj(data, dims=dims), solution
+        
+   
     
     def run(self, rho0, tlist):
         """
