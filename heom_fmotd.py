@@ -58,6 +58,41 @@ from qutip.cy.spconvert import dense2D_to_fastcsr_fmode
 from qutip.superoperator import vec2mat  
 from copy import copy, deepcopy
 
+from qutip._mkl.spmv import mkl_spmv
+import ctypes
+from ctypes import POINTER,c_int,c_char,c_double, byref
+from numpy import ctypeslib
+import qutip.settings as qset
+zcsrgemv = qset.mkl_lib.mkl_cspblas_zcsrgemv
+
+def local_mkl_spmv(t, x, A,ind, ptr):
+     """
+     sparse csr_spmv using MKL
+     """
+     (m,n) = A.shape
+
+     # Pointers to data of the matrix
+     data    = A.data.ctypes.data_as(ctypeslib.ndpointer(np.complex128, ndim=1, flags='C'))
+     indptr  = A.indptr.ctypes.data_as(POINTER(c_int))
+     indices = A.indices.ctypes.data_as(POINTER(c_int))
+
+     # Allocate output, using same conventions as input
+     if x.ndim is 1:
+        y = np.empty(m,dtype=np.complex,order='C')
+     elif x.ndim==2 and x.shape[1]==1:
+        y = np.empty((m,1),dtype=np.complex,order='C')
+     else:
+        raise Exception('Input vector must be 1D row or 2D column vector')
+     
+     np_x = x.ctypes.data_as(ctypeslib.ndpointer(np.complex128, ndim=1, flags='C'))
+     np_y = y.ctypes.data_as(ctypeslib.ndpointer(np.complex128, ndim=1, flags='C'))
+     # now call MKL. This returns the answer in np_y, which points to y
+     zcsrgemv(byref(c_char(bytes(b'N'))), byref(c_int(m)), data ,indptr, indices, np_x, np_y ) 
+     return y
+     
+     
+
+
 class BosonicHEOMSolver(object):
     """
     This is superclass for all solvers that use the HEOM method for
@@ -350,9 +385,24 @@ class BosonicHEOMSolver(object):
             solver.set_f_params(solver_params)
 
         else:
-
+            #from qutip._mkl.spmv import mkl_spmv
+            #from mkl import cy_ode_rhs_mkl
+            #from mkl_local import cy_ode_rhs as cy_ode_rhs2
+            #solver = scipy.integrate.ode(mkl_ode_rhs)
+            
+            
             solver = scipy.integrate.ode(cy_ode_rhs)
-            solver.set_f_params(RHSmat.data, RHSmat.indices, RHSmat.indptr)
+            solver.set_f_params(RHSmat.data, RHSmat.indices, RHSmat.indptr) #normal
+            
+            
+            
+            #solver = scipy.integrate.ode(local_mkl_spmv)
+            #solver.set_f_params(RHSmat, RHSmat.indices, RHSmat.indptr) #mkl
+            
+            
+            
+            
+            #solver.set_f_params(RHSmat)
 
         # Sets options for solver
 
@@ -361,6 +411,7 @@ class BosonicHEOMSolver(object):
                      nsteps=options.nsteps, first_step=options.first_step,
                      min_step=options.min_step,max_step=options.max_step)
 
+  
         # Sets attributes related to solver
 
         self._ode = solver
@@ -371,6 +422,8 @@ class BosonicHEOMSolver(object):
         else:
             self._sup_dim = int(sqrt(Hsys.shape[0])) * int(sqrt(Hsys.shape[0]))
         self._N_he = nstates
+    
+    
     def steady_state(self, max_iter_refine = 100, use_mkl = True, weighted_matching = False):
         """
         Computes steady state dynamics
