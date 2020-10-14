@@ -141,7 +141,8 @@ class BosonicHEOMSolver(object):
         list of Hamiltonians with time dependence
         
         Format for input (if list):
-        [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
+        [time_independent_part, [H1, time_dep_function1], 
+        [H2, time_dep_function2]]
 
 
     coup_op : Qobj or list
@@ -237,7 +238,8 @@ class BosonicHEOMSolver(object):
             "dimensional.")
 
         if len(ckAR) != len(vkAR) or len(ckAI) != len(vkAI):
-            raise RuntimeError("Spectral density correlation coefficients not "+"specified correctly.")
+            raise RuntimeError("Spectral density correlation coefficients not "
+            	+"specified correctly.")
 
         # Check that no two vk's should be same in same set
 
@@ -381,7 +383,7 @@ class BosonicHEOMSolver(object):
             if i < self.NR + self.NI :
                 gradient_sum += he_n[i]*self.vk[i]
             
-            # the last few values are duplicate so only half need to be processed
+            # the last few values are duplicate so only half need be processed
             else:
                 if skip:
                     skip = 0
@@ -606,10 +608,10 @@ class BosonicHEOMSolver(object):
 
         # Sets options for solver
 
-        solver.set_integrator('zvode', method=options.method, order=options.order,
-                     atol=options.atol, rtol=options.rtol,
-                     nsteps=options.nsteps, first_step=options.first_step,
-                     min_step=options.min_step,max_step=options.max_step)
+        solver.set_integrator('zvode', method=options.method, 
+        			order=options.order, atol=options.atol, rtol=options.rtol,
+                    nsteps=options.nsteps, first_step=options.first_step,
+                    min_step=options.min_step,max_step=options.max_step)
 
         # Sets attributes related to solver
 
@@ -626,16 +628,19 @@ class BosonicHEOMSolver(object):
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
         self._N_he = nstates
 
-    def steady_state(self, max_iter_refine = 100, use_mkl = True, weighted_matching = False):
+    def steady_state(self, max_iter_refine = 100, use_mkl = True, 
+    	weighted_matching = False):
         """
         Computes steady state dynamics
         
         max_iter_refine : Int
-            Parameter for the mkl LU solver. If pardiso errors are returned this should be increased.
+            Parameter for the mkl LU solver. If pardiso errors are returned 
+            this should be increased.
         use_mkl : Boolean
             Optional override default use of mkl if mkl is installed.
         weighted_matching : Boolean
-            Setting this true may increase run time, but reduce stability (pardisio may not converge).
+            Setting this true may increase run time, but reduce stability 
+            (pardisio may not converge).
         """
         
         
@@ -737,7 +742,8 @@ class BosonicHEOMSolver(object):
             self.progress_bar.update(t_idx)
             if t_idx < n_tsteps - 1:
                 solver.integrate(solver.t + dt[t_idx])
-                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape, order='F'), dims=rho0.dims)
+                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape, order='F'), 
+                	dims=rho0.dims)
                 output.states.append(rho)
 
         self.progress_bar.finished()
@@ -771,7 +777,8 @@ class FermionicHEOMSolver(object):
         list of Hamiltonians with time dependence
         
         Format for input (if list):
-        [time_independent_part, [H1, time_dep_function1], [H2, time_dep_function2]]
+        [time_independent_part, [H1, time_dep_function1], 
+        [H2, time_dep_function2]]
 
     coup_op : Qobj or list
         Operator describing the coupling between system and bath.
@@ -975,9 +982,11 @@ class FermionicHEOMSolver(object):
 
         op1 = 0
         if k%2 == 1:
-            op1 = pref*((ck[self.offsets[k]+idx]*self.spreQ[k]) - (sign1*np.conj(ck[self.offsets[k-1]+idx]*self.spostQ[k])))
+            op1 = pref*((ck[self.offsets[k]+idx]*self.spreQ[k]) - \
+            	(sign1*np.conj(ck[self.offsets[k-1]+idx]*self.spostQ[k])))
         else:
-            op1 = pref*((ck[self.offsets[k]+idx]*self.spreQ[k]) - (sign1*np.conj(ck[self.offsets[k+1]+idx]*self.spostQ[k])))
+            op1 = pref*((ck[self.offsets[k]+idx]*self.spreQ[k]) - \
+            	(sign1*np.conj(ck[self.offsets[k+1]+idx]*self.spostQ[k])))
         # Fill in larger L
         rowidx = self.he2idx[he_n]
         colidx = self.he2idx[prev_he]
@@ -1174,10 +1183,10 @@ class FermionicHEOMSolver(object):
 
         # Sets options for solver
 
-        solver.set_integrator('zvode', method=options.method, order=options.order,
-                     atol=options.atol, rtol=options.rtol,
-                     nsteps=options.nsteps, first_step=options.first_step,
-                     min_step=options.min_step,max_step=options.max_step)
+        solver.set_integrator('zvode', method=options.method, 
+        			order=options.order, atol=options.atol, rtol=options.rtol,
+                    nsteps=options.nsteps, first_step=options.first_step,
+                    min_step=options.min_step,max_step=options.max_step)
 
         # Sets attributes related to solver
 
@@ -1193,16 +1202,19 @@ class FermionicHEOMSolver(object):
         else:
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
         
-    def steady_state(self, max_iter_refine = 100, use_mkl = True, weighted_matching = False):
+    def steady_state(self, max_iter_refine = 100, use_mkl = True, 
+    	weighted_matching = False):
         """
         Computes steady state dynamics
         
         max_iter_refine : Int
-            Parameter for the mkl LU solver. If pardiso errors are returned this should be increased.
+            Parameter for the mkl LU solver. If pardiso errors are returned 
+            this should be increased.
         use_mkl : Boolean
             Optional override default use of mkl if mkl is installed.
         weighted_matching : Boolean
-            Setting this true may increase run time, but reduce stability (pardisio may not converge).
+            Setting this true may increase run time, but reduce stability 
+            (pardisio may not converge).
         """
         
         
@@ -1305,7 +1317,8 @@ class FermionicHEOMSolver(object):
             self.progress_bar.update(t_idx)
             if t_idx < n_tsteps - 1:
                 solver.integrate(solver.t + dt[t_idx])
-                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape, order='F'), dims=rho0.dims)
+                rho = Qobj(solver.y[:sup_dim].reshape(rho0.shape, order='F'), 
+                	dims=rho0.dims)
                 output.states.append(rho)
 
         self.progress_bar.finished()
