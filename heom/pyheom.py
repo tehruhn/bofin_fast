@@ -280,7 +280,8 @@ class BosonicHEOMSolver(object):
         for i in range(len(vkAR)):
             for j in range(len(vkAI)):
                 if(np.isclose(vkAR[i], vkAI[j], rtol=1e-5, atol=1e-7) and 
-                   np.allclose(coup_op[i], coup_op[nr+j], rtol=1e-5, atol=1e-7)):
+                    np.allclose(coup_op[i], coup_op[nr+j], 
+                    rtol=1e-5, atol=1e-7)):
                     common_ck.append(ckAR[i])
                     common_ck.append(ckAI[j])
                     common_vk.append(vkAR[i])
@@ -643,8 +644,6 @@ class BosonicHEOMSolver(object):
             (pardisio may not converge).
         """
         
-        
-        
         nstates =  self.nhe
         sup_dim = self._sup_dim
         n = int(np.sqrt(sup_dim))
@@ -655,8 +654,10 @@ class BosonicHEOMSolver(object):
         b_mat = np.zeros(sup_dim*nstates, dtype=complex)
         b_mat[0] = 1.
 
+        L = L.tolil()
         L[0, 0 : n**2*nstates] = 0.
-          
+        L = L.tocsr()
+
         if settings.has_mkl & use_mkl == True:
             print("Using Intel mkl solver")
             from qutip._mkl.spsolve import (mkl_splu, mkl_spsolve)
@@ -1229,8 +1230,10 @@ class FermionicHEOMSolver(object):
         b_mat = np.zeros(sup_dim*nstates, dtype=complex)
         b_mat[0] = 1.
 
+        L = L.tolil()
         L[0, 0 : n**2*nstates] = 0.
-          
+        L = L.tocsr()
+        
         if settings.has_mkl & use_mkl == True:
             print("Using Intel mkl solver")
             from qutip._mkl.spsolve import (mkl_splu, mkl_spsolve)

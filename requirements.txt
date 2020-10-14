@@ -2,3 +2,4 @@ Cython
 qutip
 scipy
 numpy
+nose

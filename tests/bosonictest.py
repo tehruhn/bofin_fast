@@ -50,7 +50,7 @@ NI = len(ckAI)
 Q2 = [Q for kk in range(NR+NI)]
 
 options = Options(nsteps=15000, store_states=True, rtol=1e-14, atol=1e-14)
-
+print(Q2)
 HEOMMats = BosonicHEOMSolver(Hsys, Q2, ckAR, ckAI, vkAR, vkAI, NC, options=options)
 
 # Initial state of the system.
@@ -158,3 +158,4 @@ print("-----------------")
 
 print("difference between expected analytical evolution and heom result:")
 print(PEG_DL2 - P12exp) #This difference should be very small if we use same number of matsubara terms
+

@@ -215,52 +215,52 @@ resultHEOM1 = FermionicHEOMSolver(H0, Qops,  eta_list, gamma_list, Ncc,options=o
 
 rhossHP,fullssP=resultHEOM1.steady_state()
 
-#One advantage of this simple model is the current is analytically solvable, so we can check convergence of the result
+# #One advantage of this simple model is the current is analytically solvable, so we can check convergence of the result
 
-def CurrFunc():
-    def lamshift(w,mu):
-        return (w-mu)*Gamma_w(w,mu)/(2*W)
-    integrand = lambda w: ((2/(np.pi))*Gamma_w(w,mu_l)*Gamma_w(w,mu_r)*(f(beta*(w-mu_l))-f(beta*(w-mu_r))) /
-            ((Gamma_w(w,mu_l)+Gamma_w(w,mu_r))**2 +4*(w-e1 - lamshift(w,mu_l)-lamshift(w,mu_r))**2))
-    def real_func(x):
-        return np.real(integrand(x))
-    def imag_func(x):
-        return np.imag(integrand(x))
+# def CurrFunc():
+#     def lamshift(w,mu):
+#         return (w-mu)*Gamma_w(w,mu)/(2*W)
+#     integrand = lambda w: ((2/(np.pi))*Gamma_w(w,mu_l)*Gamma_w(w,mu_r)*(f(beta*(w-mu_l))-f(beta*(w-mu_r))) /
+#             ((Gamma_w(w,mu_l)+Gamma_w(w,mu_r))**2 +4*(w-e1 - lamshift(w,mu_l)-lamshift(w,mu_r))**2))
+#     def real_func(x):
+#         return np.real(integrand(x))
+#     def imag_func(x):
+#         return np.imag(integrand(x))
 
-    #in principle the bounds should be checked if parameters are changed
-    a= -2
-    b=2
-    real_integral = quad(real_func, a, b)
-    imag_integral = quad(imag_func, a, b)
+#     #in principle the bounds should be checked if parameters are changed
+#     a= -2
+#     b=2
+#     real_integral = quad(real_func, a, b)
+#     imag_integral = quad(imag_func, a, b)
     
 
 
-    return real_integral[0] + 1.0j * imag_integral[0]
+#     return real_integral[0] + 1.0j * imag_integral[0]
     
-curr_ana = CurrFunc()
-print(curr_ana)
+# curr_ana = CurrFunc()
+# print(curr_ana)
 
-#we can extract the current from the auxiliary ADOs calculated in the steady state
+# #we can extract the current from the auxiliary ADOs calculated in the steady state
 
-aux_1_list_list=[]
-aux1_indices_list=[]
+# aux_1_list_list=[]
+# aux1_indices_list=[]
 
-K = Kk  
-
-
-shape = H0.shape[0]
-dims = H0.dims
-
-aux_1_list, aux1_indices, idx2state = get_aux_matrices([fullssP], 1, 4, K, Ncc, shape, dims)
+# K = Kk  
 
 
-d1 = destroy(2)   #Kk to 2*Kk
-currP = -1.0j * (((sum([(d1*aux_1_list[gg][0]).tr() for gg in range(Kk,2*Kk)]))) - ((sum([(d1.dag()*aux_1_list[gg][0]).tr() for gg in range(Kk)]))))
+# shape = H0.shape[0]
+# dims = H0.dims
+
+# aux_1_list, aux1_indices, idx2state = get_aux_matrices([fullssP], 1, 4, K, Ncc, shape, dims)
 
 
-print("Pade current", -currP)
+# d1 = destroy(2)   #Kk to 2*Kk
+# currP = -1.0j * (((sum([(d1*aux_1_list[gg][0]).tr() for gg in range(Kk,2*Kk)]))) - ((sum([(d1.dag()*aux_1_list[gg][0]).tr() for gg in range(Kk)]))))
 
-print("Analytical curernt", curr_ana)
+
+# print("Pade current", -currP)
+
+# print("Analytical curernt", curr_ana)
     
-print("Diff should be small:", curr_ana - (-currP))   
+# print("Diff should be small:", curr_ana - (-currP))   
 

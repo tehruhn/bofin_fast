@@ -11,5 +11,7 @@ setup(
 	author="Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford",
 	author_email="nwlambert@gmail.com",
 	packages=find_packages(include=['heom', 'heom.*']),
-	requires=REQUIRES
+	requires=REQUIRES,
+	test_suite='nose.collector',
+	tests_require=['unittest','nose']
 )
