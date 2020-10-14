@@ -1,7 +1,7 @@
-heom
-====
+bofinpy
+=======
 
 .. toctree::
    :maxdepth: 4
 
-   heom
+   bofinpy

@@ -8,19 +8,40 @@ The “hierarchical equations of motion” (HEOM) method is a powerful numerical
 
 ## Repository layout
 
-## Usage instructions for Python version
+The repository contains two packaged versions of the HEOM solver : 
 
-These commands should be run from the main repository folder, `qutip_heom`.
-Install dependencies, and then install the package locally :
+- **BoFiNPy** : Pure Python version of the HEOM solver. Has a `BosonicHEOMSolver` and `FermionicHEOMSolver`.
+- **BoFiNCPP** : Hybrid C++ - Python version, with backend for RHS construction of the HEOM solver written in C++. Otherwise completely identical in user interface and functionality to the pure Python version.
+
+It should be noted that the C++ version dramatically speeds up RHS construction, with respect to the Python version. (TODO SHOW PERFORMANCE GRAPH)
+
+## Install dependencies
+
+From the main repository folder, `qutip_heom`, run the following command to install dependencies :
 ```
 pip3 install -r requirements.txt
+```
+## Usage instructions for Python version (BoFiN-Py)
+
+From `qutip_heom`, navigate to the `bofin_py_heom` folder using `cd bofin_py_heom/`. From here, run the following commands :
+```
 pip3 install -e .
 ```
-To run tests using `Nose`, run :
+This installs the pure Python version of the HEOM solvers. These solvers can be imported as :
 ```
-nosetests
+from bofinpy.heom import BosonicHEOMSolver, FermionicHEOMSolver
 ```
-## Usage instructions for C++ version
+## Usage instructions for C++ version (BoFiN-CPP)
+
+From inside `qutip_heom`, navigate to the `bofin_cpp_heom` folder using `cd bofin_cpp_heom/`. From here, run the following commands :
+```
+python3 setup.py build_ext --inplace
+pip3 install -e .
+```
+This installs the hybrid Python - C++ version of the HEOM solvers. These are identical in usage to the Python solvers. These solvers can be imported as :
+```
+from bofincpp.heom import BosonicHEOMSolver, FermionicHEOMSolver
+```
 
 ## Usage example
 
@@ -38,8 +59,18 @@ The documentation HTML files can be found in `docs/build/html`. The main file is
 
 There are several example notebooks illustrating usage of the code, in the `example_notebooks` folder.
 
+## Running tests
+
+To run tests using `Nose` in the `qutip_heom` directory, run :
+```
+nosetests
+```
 ## Citation
 
 ## License
 
 ## Resources
+
+## Temp qutip error :
+
+`from qutip._mkl.spmv import mkl_spmv`

@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 REQUIRES = ["Cython", "qutip", "numpy", "scipy"]
 
 setup(
-	name="heom",
+	name="bofinpy",
 	version="0.0.1",
-	description="Bosonic and Fermionic hierarchical-equations-of-motion library for QuTiP",
+	description="Python version for Bosonic and Fermionic hierarchical-equations-of-motion library for QuTiP",
 	long_description=open("README.md").read(),
 	url="",
 	author="Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford",

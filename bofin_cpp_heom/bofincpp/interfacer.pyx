@@ -1,5 +1,5 @@
 # distutils: language = c++
-# distutils: sources = utilities.cpp
+# distutils: sources = bofincpp/utilities.cpp
 
 import numpy as np
 import math
