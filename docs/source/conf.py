@@ -12,14 +12,14 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../bofinpy/'))
+sys.path.insert(0, os.path.abspath('../../bofin_py_heom/bofinpy/'))
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'BoFiN-HEOM'
-copyright = '2020, Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford'
-author = 'Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford'
+copyright = '2020, Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Tarun Raheja'
+author = 'Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Tarun Raheja'
 
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'

@@ -12,14 +12,6 @@ bofinpy.heom module
    :undoc-members:
    :show-inheritance:
 
-bofinpy.setup module
---------------------
-
-.. automodule:: bofinpy.setup
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 
