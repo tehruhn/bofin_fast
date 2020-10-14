@@ -57,7 +57,7 @@ from qutip.cy.spconvert import dense2D_to_fastcsr_fmode
 from qutip.superoperator import vec2mat  
 from copy import copy, deepcopy
 
-from qutip._mkl.spmv import mkl_spmv
+# from qutip._mkl.spmv import mkl_spmv
 import ctypes
 from ctypes import POINTER,c_int,c_char,c_double, byref
 from numpy import ctypeslib
@@ -451,7 +451,9 @@ class BosonicHEOMSolver(object):
         b_mat = np.zeros(sup_dim*nstates, dtype=complex)
         b_mat[0] = 1.
 
+        L = L.tolil()
         L[0, 0 : n**2*nstates] = 0.
+        L = L.tocsr()
           
         if settings.has_mkl & use_mkl == True:
             print("Using Intel mkl solver")
@@ -830,7 +832,9 @@ class FermionicHEOMSolver(object):
         b_mat = np.zeros(sup_dim*nstates, dtype=complex)
         b_mat[0] = 1.
 
+        L = L.tolil()
         L[0, 0 : n**2*nstates] = 0.
+        L = L.tocsr()
           
         if settings.has_mkl & use_mkl == True:
             print("Using Intel mkl solver")

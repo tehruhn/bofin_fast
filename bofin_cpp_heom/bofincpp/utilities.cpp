@@ -582,7 +582,7 @@ void HEOM::fermion_initialize(){
 	// cout << "kcut " << kcut << endl;
 	// initialize dicts
 	vector<int> dms(ck.size(), 2);
-	cout << "cutoff: " << ncut << endl;
+	// cout << "cutoff: " << ncut << endl;
 	pair<int, pair< map<int, vector<int> > , map< vector<int>, int> > > ans = _heom_state_dictionaries(dms, ncut);
 	nhe = ans.first;
 	he2idx = ans.second.second;
@@ -602,7 +602,7 @@ void HEOM::fermion_initialize(){
 		fact /= i;
 	}
 	total_nhe = fact;
-	cout << "N: " << N << endl;
+	// cout << "N: " << N << endl;
 	grad_shape = make_pair(N*N, N*N);
 	for(int i = 0; i < (int)coupling.size(); i++){
 		spreQ.push_back(spre(coupling[i]));
@@ -803,7 +803,7 @@ void HEOM::fermion_grad_next(vector<int> he_n, int k, vector<int> next_he, int i
 
 // make the rhs for fermionic case
 void HEOM::fermion_rhs(){
-	cout << "total_nhe: "<< total_nhe << endl;
+	// cout << "total_nhe: "<< total_nhe << endl;
 	while(nhe < total_nhe){
 		vector<int> heidxlist;
 		traverse(idx2he, it){

@@ -70,7 +70,3 @@ nosetests
 ## License
 
 ## Resources
-
-## Temp qutip error :
-
-`from qutip._mkl.spmv import mkl_spmv`
