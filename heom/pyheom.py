@@ -628,7 +628,7 @@ class BosonicHEOMSolver(object):
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
         self._N_he = nstates
 
-    def steady_state(self, max_iter_refine = 100, use_mkl = True, 
+    def steady_state(self, max_iter_refine = 100, use_mkl = False, 
     	weighted_matching = False):
         """
         Computes steady state dynamics
@@ -1202,7 +1202,7 @@ class FermionicHEOMSolver(object):
         else:
             self._sup_dim = int(sqrt(H.shape[0])) * int(sqrt(H.shape[0]))
         
-    def steady_state(self, max_iter_refine = 100, use_mkl = True, 
+    def steady_state(self, max_iter_refine = 100, use_mkl = False, 
     	weighted_matching = False):
         """
         Computes steady state dynamics
