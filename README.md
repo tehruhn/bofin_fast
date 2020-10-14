@@ -10,15 +10,34 @@ The “hierarchical equations of motion” (HEOM) method is a powerful numerical
 
 ## Usage instructions for Python version
 
+These commands should be run from the main repository folder, `qutip_heom`.
+Install dependencies, and then install the package locally :
+```
+pip3 install -r requirements.txt
+pip3 install -e .
+```
+To run tests using `Nose`, run :
+```
+nosetests
+```
+To build the documentation locally:
+```
+cd docs/
+make html
+```
 ## Usage instructions for C++ version
 
 ## Usage example
 
 ## Documentation
 
+The documentation HTML files can be found in `docs/build/html`. The main file is `index.html`.
+
 ## Example notebooks
 
-## Citations
+There are several example notebooks illustrating usage of the code, in the `example_notebooks` folder.
+
+## Citation
 
 ## License
 

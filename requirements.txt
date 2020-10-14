@@ -3,3 +3,5 @@ qutip
 scipy
 numpy
 nose
+sphinx
+sphinx-rtd-theme
