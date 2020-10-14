@@ -21,7 +21,7 @@ From the main repository folder, `qutip_heom`, run the following command to inst
 ```
 pip3 install -r requirements.txt
 ```
-## Usage instructions for Python version (BoFiN-Py)
+## Installation instructions for Python version (BoFiN-Py)
 
 From `qutip_heom`, navigate to the `bofin_py_heom` folder using `cd bofin_py_heom/`. From here, run the following commands :
 ```
@@ -31,7 +31,7 @@ This installs the pure Python version of the HEOM solvers. These solvers can be 
 ```
 from bofinpy.heom import BosonicHEOMSolver, FermionicHEOMSolver
 ```
-## Usage instructions for C++ version (BoFiN-CPP)
+## Installation instructions for C++ version (BoFiN-CPP)
 
 From inside `qutip_heom`, navigate to the `bofin_cpp_heom` folder using `cd bofin_cpp_heom/`. From here, run the following commands :
 ```
