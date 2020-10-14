@@ -27,10 +27,8 @@ From `qutip_heom`, navigate to the `bofin_py_heom` folder using `cd bofin_py_heo
 ```
 pip3 install -e .
 ```
-This installs the pure Python version of the HEOM solvers. These solvers can be imported as :
-```
-from bofinpy.heom import BosonicHEOMSolver, FermionicHEOMSolver
-```
+This installs the pure Python version of the HEOM solvers.
+
 ## Installation instructions for C++ version (BoFiN-CPP)
 
 From inside `qutip_heom`, navigate to the `bofin_cpp_heom` folder using `cd bofin_cpp_heom/`. From here, run the following commands :
@@ -38,12 +36,17 @@ From inside `qutip_heom`, navigate to the `bofin_cpp_heom` folder using `cd bofi
 python3 setup.py build_ext --inplace
 pip3 install -e .
 ```
-This installs the hybrid Python - C++ version of the HEOM solvers. These are identical in usage to the Python solvers. These solvers can be imported as :
-```
-from bofincpp.heom import BosonicHEOMSolver, FermionicHEOMSolver
-```
+This installs the hybrid Python - C++ version of the HEOM solvers. These are identical in usage and functionality to the Python solvers.
 
 ## Usage example
+
+```
+# import the pure Python Bosonic HEOM Solver
+from bofinpy.heom import BosonicHEOMSolver as BosonicHEOMSolverPy
+
+# import the hybrid Python-C++ Bosonic HEOM Solver
+from bofincpp.heom import BosonicHEOMSolver as BosonicHEOMSolverCPP
+```
 
 ## Documentation
 
