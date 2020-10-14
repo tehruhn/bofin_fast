@@ -20,16 +20,17 @@ To run tests using `Nose`, run :
 ```
 nosetests
 ```
-To build the documentation locally:
-```
-cd docs/
-make html
-```
 ## Usage instructions for C++ version
 
 ## Usage example
 
 ## Documentation
+
+To build the documentation locally:
+```
+cd docs/
+make html
+```
 
 The documentation HTML files can be found in `docs/build/html`. The main file is `index.html`.
 
