@@ -1,16 +1,15 @@
-# python setup.py build_ext --inplace
-from distutils.core import setup
-from distutils.extension import Extension
-from Cython.Build import cythonize
-from Cython.Distutils import build_ext
-import numpy
-import os
+from setuptools import setup, find_packages
 
-# os.environ["CC"] = "g++" 
-# os.environ["CXX"] = "g++"
+REQUIRES = ["Cython", "qutip", "numpy", "scipy"]
 
 setup(
-    name = "interfacer",
-    ext_modules = cythonize('*.pyx'),
-    include_dirs = [numpy.get_include()]
+	name="heom",
+	version="0.0.1",
+	description="Bosonic and Fermionic hierarchical-equations-of-motion library for QuTiP",
+	long_description=open("README.md").read(),
+	url="",
+	author="Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford",
+	author_email="nwlambert@gmail.com",
+	packages=find_packages(include=['heom', 'heom.*']),
+	requires=REQUIRES
 )

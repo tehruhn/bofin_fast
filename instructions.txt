@@ -1,3 +1,0 @@
-Run the following:
-
-python setup.py build_ext --inplace

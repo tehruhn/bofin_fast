@@ -1,16 +1,12 @@
-CONTENTS OF FOLDER
-==================
+A Bosonic and Fermionic hierarchical-equations-of-motion library for QuTiP with applications in light-harvesting, quantum control, and single-molecule electronics
+==================================================================================================================================================================
 
-Key files
----------
+Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford, Franco Nori 
 
-- heom_fmotd.py (hybrid Python plus C++ version of HEOM solver)
-- heom_fmotd_NL.py (pure Python version of HEOM solver)
-- utilities.cpp (C++ backend to be built)
+Abstract
+--------
+
+The “hierarchical equations of motion” (HEOM) method is a powerful numerical approach tosolve the dynamics and steady-state of a quantum system coupled to a non-Markovian and non-perturbative environment. Originally developed in the context of physical chemistry, it has alsobeen extended and applied to problems in solid-state physics, optics, single-molecule electronics,and biological physics. Here we present a numerical library in Python, integrated with the powerfulQuTiP platform, which implements the HEOM for both Bosonic and Fermionic environments. Wedemonstrate it’s utility with a series of examples.  For the Bosonic case, we present examplesfor fitting arbitrary spectral densities, modelling a Fenna-Matthews-Olsen photosynthetic complex,and simulating dynamical decoupling of a spin from it’s environment.  For the Fermionic case,we present an integrable single-impurity example, used as a benchmark of the code, and a morecomplex example of an impurity strongly coupled to a single vibronic mode, with applications insingle-molecule electronics.
 
 Instructions
 ------------
-
-Build the C++ version with ``` python setup.py build_ext --inplace```
-
-Run example notebooks.
