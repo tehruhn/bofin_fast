@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from setuptools import setup, find_packages
 
 REQUIRES = ["Cython", "qutip", "numpy", "scipy"]
@@ -11,7 +12,5 @@ setup(
     author="Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford",
     author_email="nwlambert@gmail.com",
     packages=find_packages(include=['heom', 'heom.*']),
-    requires=REQUIRES,
-    test_suite='nose.collector',
-    tests_require=['unittest','nose']
+    requires=REQUIRES
 )

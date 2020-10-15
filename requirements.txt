@@ -2,6 +2,6 @@ Cython
 qutip
 scipy
 numpy
-nose
+pytest
 sphinx
 sphinx-rtd-theme

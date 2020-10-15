@@ -64,9 +64,9 @@ There are several example notebooks illustrating usage of the code, in the `exam
 
 ## Running tests
 
-To run tests using `Nose` in the `qutip_heom` directory, run :
+To run tests using `pytest` in the `qutip_heom` directory, run :
 ```
-nosetests
+pytest -v
 ```
 ## Citation
 
