@@ -4,34 +4,38 @@ Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford, Franco Nori
 
 ## Abstract
 
-The “hierarchical equations of motion” (HEOM) method is a powerful numerical approach to solve the dynamics and steady-state of a quantum system coupled to a non-Markovian and non-perturbative environment. Originally developed in the context of physical chemistry, it has also been extended and applied to problems in solid-state physics, optics, single-molecule electronics,and biological physics. Here we present a numerical library in Python, integrated with the powerful QuTiP platform, which implements the HEOM for both Bosonic and Fermionic environments. Wedemonstrate it’s utility with a series of examples.  For the Bosonic case, we present examples for fitting arbitrary spectral densities, modelling a Fenna-Matthews-Olsen photosynthetic complex,and simulating dynamical decoupling of a spin from it’s environment.  For the Fermionic case, we present an integrable single-impurity example, used as a benchmark of the code, and a morecomplex example of an impurity strongly coupled to a single vibronic mode, with applications in single-molecule electronics.
+The “hierarchical equations of motion” (HEOM) method is a powerful numerical approach to solve the dynamics and steady-state of a quantum system coupled to a non-Markovian and non-perturbative environment. Originally developed in the context of physical chemistry, it has also been extended and applied to problems in solid-state physics, optics, single-molecule electronics,and biological physics. Here we present a numerical library in Python, integrated with the powerful QuTiP platform, which implements the HEOM for both Bosonic and Fermionic environments. Wedemonstrate it’s utility with a series of examples.  For the Bosonic case, we present examples for fitting arbitrary spectral densities, modelling a Fenna-Matthews-Olsen photosynthetic complex,and simulating dynamical decoupling of a spin from its environment.  For the Fermionic case, we present an integrable single-impurity example, used as a benchmark of the code, and a more complex example of an impurity strongly coupled to a single vibronic mode, with applications in single-molecule electronics.
 
-## Repository layout
+## C++ HEOM Solver
 
-The repository contains two packaged versions of the HEOM solver : 
+We have developed two packaged versions of the HEOM solver : 
 
-- **BoFiNPy** : Pure Python version of the HEOM solver. Has a `BosonicHEOMSolver` and `FermionicHEOMSolver`.
-- **BoFiNCPP** : Hybrid C++ - Python version, with backend for RHS construction of the HEOM solver written in C++. Otherwise completely identical in user interface and functionality to the pure Python version.
+- **BoFiN-Py** : Pure Python version of the HEOM solver. Has a `BosonicHEOMSolver` and `FermionicHEOMSolver`.
+- **BoFiN-CPP** : Hybrid C++ - Python version, with backend for RHS construction of the HEOM solver written in C++. Otherwise completely identical in user interface and functionality to the pure Python version.
 
-It should be noted that the C++ version dramatically speeds up RHS construction, with respect to the Python version. (TODO SHOW PERFORMANCE GRAPH)
+This repository contains the hybrid Python-C++ version of the solver. It should be noted that the C++ version dramatically speeds up RHS construction, with respect to the Python version. (TODO SHOW PERFORMANCE GRAPH)
 
-## Install dependencies
 
-From the main repository folder, `qutip_heom`, run the following command to install dependencies :
+## Installing dependencies & setting up
+
+For uniformity across platforms, we recommend using Conda environments to keep the setup clean, and to install dependencies painlessly (since `pip install` is known to have issues on Mac OS). Once you have Conda installed, make a fresh Python 3 environment called `bofin_env`, and then switch to it :
+
 ```
-pip3 install -r requirements.txt
+conda create -n bofin_env python=3.8
+conda activate bofin_env
 ```
-## Installation instructions for Python version (BoFiN-Py)
 
-From `qutip_heom`, navigate to the `bofin_py_heom` folder using `cd bofin_py_heom/`. From here, run the following commands :
+In your `bofin_env` environment, install requirements using :
 ```
-pip3 install -e .
+conda install numpy scipy cython
+conda install -c conda-forge qutip
 ```
-This installs the pure Python version of the HEOM solvers.
 
-## Installation instructions for C++ version (BoFiN-CPP)
+This will ensure painless setup across Windows, Linux and Mac OS.
 
-From inside `qutip_heom`, navigate to the `bofin_cpp_heom` folder using `cd bofin_cpp_heom/`. From here, run the following commands :
+## Installing the BoFiN-HEOM package
+
+Once you have the dependencies installed, from the `qutip_heom` folder, run the following commands :
 ```
 python3 setup.py build_ext --inplace
 pip3 install -e .
@@ -41,10 +45,7 @@ This installs the hybrid Python - C++ version of the HEOM solvers. These are ide
 ## Usage example
 
 ```
-# import the pure Python Bosonic HEOM Solver
-from bofinpy.heom import BosonicHEOMSolver as BosonicHEOMSolverPy
-
-# import the hybrid Python-C++ Bosonic HEOM Solver
+# import the hybrid Python - C++ Bosonic HEOM Solver
 from bofincpp.heom import BosonicHEOMSolver as BosonicHEOMSolverCPP
 ```
 
@@ -60,16 +61,9 @@ The documentation HTML files can be found in `docs/build/html`. The main file is
 
 ## Example notebooks
 
-There are several example notebooks illustrating usage of the code, in the `example_notebooks` folder.
+There are several example notebooks illustrating usage of the code, in the `examples` folder. Note how RHS constuction is much faster in pure C++.
 
-## Running tests
-
-To run tests using `pytest` in the `qutip_heom` directory, run :
-```
-pytest -v
-```
 ## Citation
 
-## License
-
 ## Resources
+

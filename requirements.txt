@@ -1,7 +1,4 @@
-Cython
-qutip
-scipy
+cython
 numpy
-pytest
-sphinx
-sphinx-rtd-theme
+scipy
+qutip
