@@ -96,7 +96,7 @@ def local_mkl_spmv(t, x, A,ind, ptr):
 
 class BosonicHEOMSolver(object):
     """
-    This is superclass for all solvers that use the HEOM method for
+    This is class for a solver that use the HEOM method for
     calculating the dynamics evolution. There are many references for this.
     A good introduction, and perhaps closest to the notation used here is:
     DOI:10.1103/PhysRevLett.104.250401
@@ -565,7 +565,7 @@ def _dsuper_list_td(t, y, L_list):
 
 class FermionicHEOMSolver(object):
     """
-    Same as above, but with Fermionic baths.
+    Same as BosonicHEOMSolver, but with Fermionic baths.
 
     Attributes
     ----------
