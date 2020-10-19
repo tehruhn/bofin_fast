@@ -1,4 +1,4 @@
-	# BoFiN (C++ version) : A Bosonic and Fermionic hierarchical-equations-of-motion library with applications in light-harvesting, quantum control, and single-molecule electronics
+# BoFiN (C++ version) : A Bosonic and Fermionic hierarchical-equations-of-motion library with applications in light-harvesting, quantum control, and single-molecule electronics
 
 Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford, Franco Nori 
 
