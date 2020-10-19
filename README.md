@@ -39,6 +39,8 @@ This will ensure painless setup across Windows, Linux and Mac OS.
 
 ## Installing the BoFiN-HEOM package
 
+Clone the repository using `git clone`.
+
 Once you have the dependencies installed, from the parent repository folder, run the following commands :
 ```
 python3 setup.py build_ext --inplace
