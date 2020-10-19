@@ -1,4 +1,4 @@
-# BoFiN (C++ version) : A Bosonic and Fermionic hierarchical-equations-of-motion library with applications in light-harvesting, quantum control, and single-molecule electronics
+	# BoFiN (C++ version) : A Bosonic and Fermionic hierarchical-equations-of-motion library with applications in light-harvesting, quantum control, and single-molecule electronics
 
 Neill Lambert, Tarun Raheja, Shahnawaz Ahmed, Alexander Pitchford, Franco Nori 
 
@@ -13,7 +13,11 @@ We have developed two packaged versions of the HEOM solver :
 - **BoFiN-Py** : Pure Python version of the HEOM solver. Has a `BosonicHEOMSolver` and `FermionicHEOMSolver`.
 - **BoFiN-CPP** : Hybrid C++ - Python version, with backend for RHS construction of the HEOM solver written in C++. Otherwise completely identical in user interface and functionality to the pure Python version.
 
-This repository contains the hybrid Python-C++ version of the solver. It should be noted that the C++ version dramatically speeds up RHS construction, with respect to the Python version. We have noted more than 10x speedup using the C++ version for some hard Fermionic HEOM problems. 
+This repository contains the hybrid Python-C++ version of the solver. It should be noted that the C++ version dramatically speeds up RHS construction, with respect to the Python version. We have noted more than 10x speedup using the C++ version for some hard Fermionic HEOM problems.
+
+### OTHER VERSION
+
+The pure Python solver can be found here : https://github.com/tehruhn/bofin
 
 
 ## Installing dependencies & setting up
