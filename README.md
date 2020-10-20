@@ -55,6 +55,10 @@ This installs the hybrid Python - C++ version of the HEOM solvers. These are ide
 from bofincpp.heom import BosonicHEOMSolver as BosonicHEOMSolverCPP
 ```
 
+## Documentation
+
+The documentation can be found at https://bofin-heom.readthedocs.io/en/main/ .
+
 ## Example notebooks
 
 There are several example notebooks illustrating usage of the code, in the `examples` folder. Note how RHS constuction is much faster in pure C++.
