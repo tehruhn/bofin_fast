@@ -50,7 +50,7 @@ from qutip.cy.spmatfuncs import cy_ode_rhs
 from qutip.solver import Options, Result
 from numpy import matrix, linalg
 from qutip.cy.spmatfuncs import cy_ode_rhs
-from bofincpp.interfacer import boson_interfacecpp, fermion_interfacecpp
+from bofinfast.interfacer import boson_interfacecpp, fermion_interfacecpp
 from scipy.sparse.linalg import (use_solver, splu, spilu, spsolve, eigs,
                          LinearOperator, gmres, lgmres, bicgstab)
 from qutip.cy.spconvert import dense2D_to_fastcsr_fmode
