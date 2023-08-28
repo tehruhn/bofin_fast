@@ -39,7 +39,7 @@ hierarchy equations of motion (HEOM).
 # Authors: Neill Lambert, Tarun Raheja
 # Contact: nwlambert@gmail.com
 
-import timeit
+import timeit, warnings
 import numpy as np
 from math import sqrt, factorial
 import scipy.sparse as sp
